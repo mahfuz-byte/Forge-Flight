@@ -1,0 +1,20 @@
+.auth-shell { min-height: 100vh; display: flex; }
+.auth-side {
+  flex: 1.1; background: var(--ink-panel); color: var(--text-on-dark);
+  display: flex; flex-direction: column; justify-content: space-between; padding: 48px;
+  background-image: radial-gradient(60% 50% at 15% 100%, rgba(235, 94, 40, 0.28), transparent 60%);
+}
+.auth-side blockquote { font-family: 'Big Shoulders Display'; font-size: 2rem; line-height: 1.15; max-width: 420px; text-wrap: balance; margin: 0; }
+.auth-side cite { display: block; font-style: normal; font-family: 'IBM Plex Mono'; font-size: 12px; color: var(--accent-strong); margin-top: 16px; }
+@media (max-width: 860px) { .auth-side { display: none; } }
+.auth-form-wrap { flex: 1; display: flex; align-items: center; justify-content: center; padding: 48px; background: var(--bg); }
+.auth-form { width: 100%; max-width: 380px; }
+.auth-tabs { display: flex; gap: 4px; background: var(--surface); padding: 4px; border-radius: 6px; margin-bottom: 32px; }
+.auth-tabs button { flex: 1; padding: 9px; border: none; background: transparent; border-radius: 4px; font-size: 13.5px; font-weight: 600; color: var(--text-muted); }
+.auth-tabs button.active { background: var(--bg-elevated); color: var(--text); box-shadow: var(--shadow-sm); }
+.auth-submit { width: 100%; margin-top: 6px; }
+.auth-foot { text-align: center; margin-top: 20px; font-size: 13px; color: var(--text-faint); }
+
+@media (max-width: 480px) {
+  .auth-form-wrap { padding: 32px 20px; }
+}

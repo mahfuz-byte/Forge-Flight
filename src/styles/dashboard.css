@@ -1,0 +1,33 @@
+.dash-header { display: flex; align-items: center; gap: 16px; margin-bottom: 22px; flex-wrap: wrap; }
+.dash-stats { margin-bottom: 4px; }
+
+.app-list { display: flex; flex-direction: column; gap: 4px; }
+.app-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; padding: 14px 0; border-bottom: 1px solid var(--border); }
+.app-row:last-child { border-bottom: none; }
+.app-row-main { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.app-row-main b { font-size: 13.5px; }
+.app-row-meta { font-size: 11.5px; color: var(--text-faint); }
+.app-row-msg { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; max-width: 480px; }
+.app-row-link { font-size: 12px; color: var(--info); font-family: 'IBM Plex Mono'; margin-top: 2px; }
+.app-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+.dash-chart-label { font-family: 'Libre Franklin'; text-transform: uppercase; letter-spacing: .04em; font-size: 12px; color: var(--text-faint); margin-bottom: 14px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 12px; height: 140px; padding: 0 4px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 8px; height: 100%; }
+.bar-track { flex: 1; width: 100%; max-width: 34px; display: flex; align-items: flex-end; background: var(--surface); border-radius: 4px; overflow: hidden; }
+.bar-fill { width: 100%; background: linear-gradient(180deg, var(--accent-strong), var(--accent)); border-radius: 4px 4px 0 0; min-height: 4px; }
+.bar-label { font-size: 10.5px; color: var(--text-faint); font-family: 'IBM Plex Mono'; }
+
+.portfolio-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; display: flex; align-items: center; gap: 14px; margin-bottom: 12px; }
+.portfolio-card .pc-body { flex: 1; min-width: 0; }
+.portfolio-card .pc-body b { display: block; font-size: 13.5px; }
+.portfolio-card .pc-body span { font-size: 11.5px; color: var(--text-faint); }
+.portfolio-card .pc-amount { text-align: right; flex-shrink: 0; }
+.portfolio-card .pc-amount b { display: block; font-family: 'IBM Plex Mono'; font-size: 15px; }
+.portfolio-card .pc-amount span { font-size: 11px; color: var(--text-faint); }
+
+@media (max-width: 640px) {
+  .bar-chart { gap: 6px; }
+  .app-row { flex-direction: column; }
+  .app-row-actions { align-self: flex-end; }
+}

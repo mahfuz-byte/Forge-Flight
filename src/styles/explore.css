@@ -1,0 +1,34 @@
+.explore-page { padding: 24px 28px 40px; }
+.explore-head h2 { font-size: 1.8rem; margin-bottom: 6px; }
+.explore-head p { color: var(--text-muted); font-size: 13.5px; margin-bottom: 18px; max-width: 560px; }
+.explore-search { position: relative; max-width: 480px; }
+.explore-search svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-faint); }
+.explore-search input {
+  width: 100%; padding: 10px 14px 10px 36px; border-radius: 20px; border: 1px solid var(--border);
+  background: var(--surface); font-size: 13.5px; color: var(--text); font-family: inherit;
+}
+.explore-search input:focus { outline: none; border-color: var(--accent); background: var(--bg-elevated); }
+
+.explore-page .filter-row { padding: 18px 0 0; border-bottom: none; }
+.tag-filter-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 0 20px; }
+.tag-filter { padding: 5px 12px; border-radius: 14px; border: 1px solid var(--border); background: none; font-size: 11.5px; font-weight: 600; color: var(--text-faint); font-family: 'IBM Plex Mono'; }
+.tag-filter:hover { border-color: var(--border-strong); color: var(--text-muted); }
+.tag-filter.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+
+.explore-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; padding-bottom: 20px; }
+.explore-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; cursor: pointer; background: var(--bg-elevated); transition: border-color .15s, transform .12s, box-shadow .15s; }
+.explore-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
+.explore-card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.explore-card h3 { font-family: 'Libre Franklin'; text-transform: none; letter-spacing: normal; font-size: 15.5px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.explore-card h3 svg { color: var(--info); width: 15px; height: 15px; }
+.explore-tagline { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 10px; }
+.explore-card .tags-row { margin-bottom: 12px; }
+.explore-card .funding-nums { font-size: 12px; }
+
+.explore-empty { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 60px 20px; color: var(--text-faint); text-align: center; }
+.explore-empty p { max-width: 320px; font-size: 13.5px; }
+
+@media (max-width: 640px) {
+  .explore-page { padding: 18px 16px 32px; }
+  .explore-grid { grid-template-columns: 1fr; }
+}

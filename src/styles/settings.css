@@ -1,0 +1,22 @@
+.settings-page { padding: 24px 28px 60px; max-width: 780px; }
+.settings-title { font-size: 1.8rem; margin-bottom: 20px; }
+.settings-shell { display: grid; grid-template-columns: 180px 1fr; gap: 28px; align-items: start; }
+
+.settings-nav { display: flex; flex-direction: column; gap: 2px; position: sticky; top: 78px; }
+.settings-nav-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; text-align: left; padding: 10px 12px; border-radius: 6px; font-size: 13.5px; font-weight: 600; color: var(--text-muted); background: none; border: none; }
+.settings-nav-item:hover { background: var(--surface); color: var(--text); }
+.settings-nav-item.active { background: var(--accent-soft); color: var(--accent-strong); }
+.nav-badge { background: var(--accent); color: var(--text-on-accent); font-size: 10.5px; font-weight: 700; min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 5px; font-family: 'IBM Plex Mono'; }
+
+.settings-card { background: var(--bg-elevated); border: 1px solid var(--border); border-radius: 10px; padding: 24px; }
+.settings-card h4 { font-family: 'Libre Franklin'; text-transform: none; letter-spacing: normal; font-size: 16px; margin-bottom: 16px; }
+.settings-hint { font-size: 13px; color: var(--text-muted); line-height: 1.6; margin-bottom: 18px; }
+.settings-toggle-row { display: flex; justify-content: space-between; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--border); font-size: 13.5px; cursor: pointer; }
+.settings-toggle-row:last-child { border-bottom: none; }
+.settings-toggle-row input { width: 18px; height: 18px; accent-color: var(--accent); }
+
+@media (max-width: 700px) {
+  .settings-page { padding: 18px 16px 40px; }
+  .settings-shell { grid-template-columns: 1fr; }
+  .settings-nav { flex-direction: row; overflow-x: auto; position: static; }
+}

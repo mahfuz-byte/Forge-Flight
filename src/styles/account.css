@@ -1,0 +1,31 @@
+.account-page { padding: 28px 28px 60px; max-width: 900px; }
+
+.account-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 40px; flex-wrap: wrap; }
+.account-avatar {
+  width: 76px; height: 76px; border-radius: 50%; background: var(--c-umber); color: var(--c-paper);
+  display: flex; align-items: center; justify-content: center; font-family: 'Big Shoulders Display';
+  font-size: 24px; font-weight: 700; flex-shrink: 0;
+}
+.account-header-body { flex: 1; min-width: 200px; }
+.account-header-body h2 { font-size: 1.7rem; margin-bottom: 4px; }
+.account-meta { font-size: 12.5px; color: var(--text-faint); font-family: 'IBM Plex Mono'; margin-bottom: 8px; }
+.account-bio { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; max-width: 480px; }
+
+.account-section { margin-bottom: 40px; }
+.account-section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
+.account-section h3 { font-size: 1.15rem; margin-bottom: 16px; }
+.account-section-head h3 { margin-bottom: 0; }
+
+.startup-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 16px; }
+.startup-tile { border: 1px solid var(--border); border-radius: 10px; padding: 16px; background: var(--bg-elevated); }
+.startup-tile-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+.startup-tile h4 { font-family: 'Libre Franklin'; text-transform: none; letter-spacing: normal; font-size: 15px; display: flex; align-items: center; gap: 6px; margin-bottom: 4px; }
+.startup-tile h4 svg { color: var(--info); width: 14px; height: 14px; }
+.startup-tile p { font-size: 12.5px; color: var(--text-muted); line-height: 1.5; margin-bottom: 14px; min-height: 34px; }
+.startup-tile-actions { display: flex; gap: 8px; }
+
+@media (max-width: 640px) {
+  .account-page { padding: 18px 16px 40px; }
+  .account-header { gap: 14px; }
+  .account-avatar { width: 60px; height: 60px; font-size: 18px; }
+}
