@@ -126,3 +126,4 @@ Forge & Flight/
 - **Backend `manage.py migrate` can't connect to the database** — check `docker ps` shows `backend-db-1` as `Up`, and that `backend/.env` matches the Docker Compose credentials.
 - **Frontend shows a blank/loading screen forever** — the backend isn't running or isn't reachable at the `VITE_API_URL` in your root `.env`. Check the backend terminal for errors and confirm `/api/health/` responds.
 - **CORS errors in the browser console** — make sure you're opening the frontend at `http://localhost:5173` (not `127.0.0.1:5173`, or vice versa) — the backend's allowed origins list is exact-match.
+# Forge-Flight
