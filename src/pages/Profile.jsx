@@ -125,7 +125,7 @@ export default function Profile() {
   const [commentDraft, setCommentDraft] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, startups, saved, toggleSaved, followed, toggleFollow, comments, addComment } = useApp();
+  const { currentUser, startups, saved, toggleSaved, followed, toggleFollow, comments, addComment, startConversation } = useApp();
   const s = startups[id] || startups.healthsync;
   const isOwner = s.ownerId === currentUser.id;
   const isSaved = saved.has(id);
@@ -142,6 +142,11 @@ export default function Profile() {
     if (!commentDraft.trim()) return;
     await addComment(id, commentDraft.trim());
     setCommentDraft('');
+  }
+
+  async function handleMessage() {
+    const convId = await startConversation(id);
+    navigate(`/messages?id=${convId}`);
   }
 
   return (
@@ -173,6 +178,12 @@ export default function Profile() {
                   onClick={() => toggleFollow(id)}
                 >
                   {isFollowing ? 'Following' : 'Follow'}
+                </button>
+                <button
+                  className="btn btn-outline btn-sm"
+                  onClick={handleMessage}
+                >
+                  <Icon name="chat" />Message
                 </button>
               </>
             )}
