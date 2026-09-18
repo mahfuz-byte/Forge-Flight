@@ -364,6 +364,19 @@ export function AppProvider({ children }) {
     setInvestments((cur) => cur.map((i) => (i.id === id ? transformInvestment(updated) : i)));
   }
 
+  async function startConversation(startupSlug) {
+    // Check if we already have a conversation with this startup
+    const existing = conversations.find(c => c.startupSlug === startupSlug);
+    if (existing) {
+      return existing.id;
+    }
+    // Create new conversation
+    const created = await api.post('/conversations/', { startup: startupSlug });
+    const transformed = transformConversation(created, currentUser.id);
+    setConversations(cur => [transformed, ...cur].sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()));
+    return transformed.id;
+  }
+
   async function sendMessage(conversationId, text) {
     const created = await api.post('/messages/', { conversation: conversationId, text });
     setConversations((cur) => cur.map((conversation) => {
@@ -464,7 +477,7 @@ export function AppProvider({ children }) {
         comments, addComment,
         applications, addApplication, setApplicationStatus,
         investments, addInvestment, cancelInvestment, setInvestmentStatus,
-        conversations, sendMessage, markConversationRead,
+        conversations, startConversation, sendMessage, markConversationRead,
         notifications, markNotificationRead, markAllNotificationsRead,
         postModalOpen, openCreatePost, closeCreatePost,
       }}
