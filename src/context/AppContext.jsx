@@ -320,9 +320,24 @@ export function AppProvider({ children }) {
     setPosts(cur => cur.map(p => p.id === postId ? { ...p, pinned: data.pinned } : p));
   }
 
-  async function editPost(postId, newText) {
-    const data = await api.patch(`/posts/${postId}/`, { text: newText });
-    setPosts(cur => cur.map(p => p.id === postId ? { ...p, postText: data.text } : p));
+  async function editPost(postId, updates) {
+    const payload = {
+      post_type: updates.postType,
+      title: updates.postTitle,
+      text: updates.postText,
+      tags: updates.tags
+    };
+    if (updates.startupId) payload.startup = updates.startupId;
+
+    const data = await api.patch(`/posts/${postId}/`, payload);
+    setPosts(cur => cur.map(p => p.id === postId ? {
+      ...p,
+      startupId: data.startup,
+      postType: data.post_type,
+      postTitle: data.title,
+      postText: data.text,
+      tags: data.tags
+    } : p));
   }
 
   function loadMorePosts(batch) {
