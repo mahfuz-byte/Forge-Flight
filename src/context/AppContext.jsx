@@ -34,7 +34,6 @@ function transformUser(u) {
 
 function transformStartup(s) {
   return {
-    id: s.id,
     name: s.name,
     initials: s.initials,
     verified: s.verified,

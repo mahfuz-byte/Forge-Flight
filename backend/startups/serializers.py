@@ -53,7 +53,6 @@ class StartupCommentSerializer(serializers.ModelSerializer):
 
 
 class StartupDetailSerializer(serializers.ModelSerializer):
-    id = serializers.ReadOnlyField()
     founder = serializers.ReadOnlyField(source='owner.name')
     funding_pct = serializers.ReadOnlyField()
     collab = CollaborationRoleSerializer(read_only=True)
@@ -66,7 +65,7 @@ class StartupDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Startup
         fields = [
-            'id', 'slug', 'name', 'initials', 'verified', 'owner', 'founder',
+            'slug', 'name', 'initials', 'verified', 'owner', 'founder',
             'tagline', 'status', 'tags', 'goal', 'raised', 'funding_pct',
             'deadline', 'overview', 'created_at', 'updated_at',
             'collab', 'team', 'timeline', 'docs', 'updates', 'comments',

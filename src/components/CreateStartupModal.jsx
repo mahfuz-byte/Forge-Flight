@@ -49,7 +49,7 @@ export default function CreateStartupModal({ open, onClose }) {
       });
       reset();
       onClose();
-      navigate(`/profile/${id}`);
+      navigate(`/dashboard/${id}`);
     } catch {
       setError('Could not create your startup — try again.');
     } finally {
