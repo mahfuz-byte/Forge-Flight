@@ -14,7 +14,7 @@ const ITEMS = [
 export default function LeftNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { openCreatePost, signedIn } = useApp();
+  const { openCreatePost, signedIn, logOut } = useApp();
   const [createStartupOpen, setCreateStartupOpen] = useState(false);
 
   function isActive(href) {
@@ -38,13 +38,18 @@ export default function LeftNav() {
         <button className={`nav-item${isActive('/account') ? ' active' : ''}`} onClick={() => navigate('/account')}>
           <Icon name="user" /><span>Profile</span>
         </button>
-        <button className={`nav-item${isActive('/settings') ? ' active' : ''}`} onClick={() => navigate('/settings')}>
-          <Icon name="gear" /><span>Settings</span>
-        </button>
         {signedIn && (
-          <button className="btn btn-outline nav-cta" style={{ width: '100%' }} onClick={() => setCreateStartupOpen(true)}>
-            <Icon name="flag" /><span>Create Startup</span>
-          </button>
+          <>
+            <button className="nav-item" onClick={async () => {
+              await logOut();
+              navigate('/');
+            }}>
+              <Icon name="logout" /><span>Log out</span>
+            </button>
+            <button className="btn btn-outline nav-cta" style={{ width: '100%' }} onClick={() => setCreateStartupOpen(true)}>
+              <Icon name="flag" /><span>Create Startup</span>
+            </button>
+          </>
         )}
         <button className="btn btn-accent nav-cta" style={{ width: '100%' }} onClick={openCreatePost}>
           <Icon name="bolt" /><span>Create post</span>

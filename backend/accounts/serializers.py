@@ -12,6 +12,8 @@ class UserSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'slug', 'name', 'first_name', 'last_name', 'initials',
             'email', 'bio', 'location', 'saved_startups', 'followed_startups',
+            'avatar', 'headline', 'resume', 'skills', 'experience_level',
+            'portfolio_link', 'investor_type', 'investment_budget', 'investment_interests',
         ]
         read_only_fields = ['id', 'slug']
 
