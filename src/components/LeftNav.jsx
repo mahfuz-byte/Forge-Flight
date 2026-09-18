@@ -34,9 +34,6 @@ export default function LeftNav() {
       <button className={`nav-item${isActive('/account') ? ' active' : ''}`} onClick={() => navigate('/account')}>
         <Icon name="user" /><span>Profile</span>
       </button>
-      <button className={`nav-item${isActive('/portfolio') ? ' active' : ''}`} onClick={() => navigate('/portfolio')}>
-        <Icon name="chart" /><span>My Portfolio</span>
-      </button>
       <button className={`nav-item${isActive('/settings') ? ' active' : ''}`} onClick={() => navigate('/settings')}>
         <Icon name="gear" /><span>Settings</span>
       </button>

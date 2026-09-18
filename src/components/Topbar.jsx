@@ -66,7 +66,6 @@ export default function Topbar() {
           {open === 'menu' && (
             <div className="dropdown" data-panel="menu">
               <button className="menu-item" onClick={() => { setOpen(null); navigate('/account'); }}><Icon name="user" />Your profile</button>
-              <button className="menu-item" onClick={() => { setOpen(null); navigate('/portfolio'); }}><Icon name="chart" />My Portfolio</button>
               <button className="menu-item" onClick={() => { setOpen(null); navigate('/settings'); }}><Icon name="gear" />Settings</button>
               <button className="menu-item" onClick={handleLogOut}><Icon name="back" />Log out</button>
             </div>

@@ -1,11 +1,11 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Topbar from '../components/Topbar';
 import LeftNav from '../components/LeftNav';
 import LogoBadge from '../components/LogoBadge';
 import CreateStartupModal from '../components/CreateStartupModal';
 import { Icon } from '../components/IconSprite';
-import { statusMeta } from '../data/startups';
+import { statusMeta, fmtMoney } from '../data/startups';
 import { useApp } from '../context/AppContext';
 import '../styles/settings.css';
 import '../styles/account.css';
@@ -30,8 +30,9 @@ function StartupTile({ id, s, onView, onManage }) {
 
 export default function AccountProfile() {
   const [createOpen, setCreateOpen] = useState(false);
+  const [portfolioTab, setPortfolioTab] = useState('portfolio');
   const navigate = useNavigate();
-  const { currentUser, myStartups, collaboratingIds, startups, applications, saved, followed } = useApp();
+  const { currentUser, myStartups, collaboratingIds, startups, applications, saved, followed, investments, cancelInvestment } = useApp();
 
   function collabRoleFor(startupId) {
     const app = applications.find((a) => a.startupId === startupId && a.applicantId === currentUser.id && a.status === 'accepted');
@@ -45,6 +46,19 @@ export default function AccountProfile() {
   const followedStartups = Array.from(followed)
     .map((id) => [id, startups[id]])
     .filter(([, s]) => s);
+
+  const myInvestments = useMemo(
+    () => investments.filter((investment) => investment.investorId === currentUser.id),
+    [investments, currentUser.id],
+  );
+  const acceptedInvestments = useMemo(
+    () => myInvestments.filter((investment) => investment.status === 'accepted' && startups[investment.startupId]),
+    [myInvestments, startups],
+  );
+  const historyInvestments = useMemo(
+    () => myInvestments.filter((investment) => investment.status !== 'pending' && startups[investment.startupId]),
+    [myInvestments, startups],
+  );
 
   return (
     <div>
@@ -143,6 +157,101 @@ export default function AccountProfile() {
                     onView={() => navigate(`/profile/${id}`)}
                   />
                 ))}
+              </div>
+            )}
+          </section>
+
+          <section className="account-section">
+            <h3>Portfolio</h3>
+            <div className="filter-row" style={{ padding: '0 0 18px', border: 'none' }}>
+              {[
+                ['portfolio', 'Investment Portfolio'],
+                ['requests', 'Investment Requests'],
+                ['history', 'Investment History'],
+              ].map(([key, label]) => (
+                <button key={key} className={`filter-pill${portfolioTab === key ? ' active' : ''}`} onClick={() => setPortfolioTab(key)}>
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            {portfolioTab === 'portfolio' && (
+              <div className="settings-card">
+                <h4>Investment Portfolio</h4>
+                <p className="settings-hint">Accepted investments from the backend.</p>
+                {acceptedInvestments.length === 0 ? (
+                  <p className="settings-hint">No accepted investments yet.</p>
+                ) : (
+                  acceptedInvestments.map((inv) => {
+                    const s = startups[inv.startupId];
+                    return (
+                      <div className="portfolio-card" key={inv.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${inv.startupId}`)}>
+                        <LogoBadge id={inv.startupId} initials={s.initials} size={44} />
+                        <div className="pc-body">
+                          <b>{s.name}</b>
+                          <span>Accepted {inv.time}</span>
+                        </div>
+                        <div className="pc-amount">
+                          <b>{fmtMoney(inv.amount)}</b>
+                          <span>accepted</span>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            )}
+
+            {portfolioTab === 'requests' && (
+              <div className="settings-card">
+                <h4>Investment Requests</h4>
+                <p className="settings-hint">Pending "Invest Now" requests you've sent.</p>
+                {myInvestments.filter((investment) => investment.status === 'pending').length === 0 ? (
+                  <p className="settings-hint">No pending requests.</p>
+                ) : (
+                  <div className="app-list">
+                    {myInvestments.filter((investment) => investment.status === 'pending').map((inv) => {
+                      const s = startups[inv.startupId];
+                      return (
+                        <div className="app-row" key={inv.id}>
+                          <div className="app-row-main" style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${inv.startupId}`)}>
+                            <b>{s.name} · {fmtMoney(inv.amount)}</b>
+                            <span className="app-row-meta">{inv.time}</span>
+                          </div>
+                          <div className="app-row-actions">
+                            <button className="btn btn-outline btn-sm" onClick={() => cancelInvestment(inv.id)}>Cancel</button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {portfolioTab === 'history' && (
+              <div className="settings-card">
+                <h4>Investment History</h4>
+                <p className="settings-hint">Completed investment requests from the backend.</p>
+                {historyInvestments.length === 0 ? (
+                  <p className="settings-hint">No completed requests yet.</p>
+                ) : (
+                  <div className="startup-grid">
+                    {historyInvestments.map((inv) => {
+                      const s = startups[inv.startupId];
+                      return (
+                        <div className="startup-tile" key={inv.id}>
+                          <div className="startup-tile-head">
+                            <LogoBadge id={inv.startupId} initials={s.initials} size={46} />
+                            <span className="status-pill status-closed">{inv.status}</span>
+                          </div>
+                          <h4>{s.name}</h4>
+                          <p>{inv.time} · {inv.status}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
             )}
           </section>
