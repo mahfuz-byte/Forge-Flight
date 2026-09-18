@@ -6,7 +6,7 @@ import { useApp } from '../context/AppContext';
 export default function Topbar() {
   const [open, setOpen] = useState(null); // 'notif' | 'menu' | null
   const navigate = useNavigate();
-  const { currentUser, logOut } = useApp();
+  const { currentUser, logOut, theme, toggleTheme } = useApp();
 
   function toggle(key) {
     setOpen((cur) => (cur === key ? null : key));
@@ -33,6 +33,15 @@ export default function Topbar() {
         <input name="q" type="text" placeholder="Search startups, founders, industries..." />
       </form>
       <div className="topbar-actions">
+        <button
+          className="icon-btn theme-toggle"
+          type="button"
+          aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+          onClick={toggleTheme}
+          title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+        >
+          <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+        </button>
         <div style={{ position: 'relative' }}>
           <button className="icon-btn" data-dropdown="notif" aria-label="Notifications" onClick={() => toggle('notif')}>
             <Icon name="bell" /><span className="dot" />

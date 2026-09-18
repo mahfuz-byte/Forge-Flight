@@ -2,7 +2,6 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Topbar from '../components/Topbar';
 import LeftNav from '../components/LeftNav';
-import RightRail from '../components/RightRail';
 import LogoBadge from '../components/LogoBadge';
 import { Icon } from '../components/IconSprite';
 import { statusMeta, fmtMoney, fundingPct } from '../data/startups';
@@ -11,13 +10,17 @@ import '../styles/explore.css';
 
 const FILTER_TABS = [
   ['all', 'All Startups'],
+  ['trending', 'Trending'],
   ['funding', 'Funding Open'],
   ['collab', 'Collaboration'],
   ['saved', 'Saved'],
 ];
 
+const TRENDING_IDS = new Set(['healthsync', 'medai', 'nimbus', 'farmchain']);
+
 const HEADINGS = {
   all: ['Explore Startups', 'Discover every startup building in public on Forge & Flight.'],
+  trending: ['Trending Startups', 'Startups seeing the strongest traction and attention right now.'],
   funding: ['Funding Opportunities', 'Startups with an open or upcoming funding window.'],
   collab: ['Collaboration Openings', 'Open roles founders are hiring for right now.'],
   saved: ['Saved Startups', 'Startups you’ve bookmarked to revisit later.'],
@@ -45,6 +48,7 @@ export default function Explore() {
 
   const list = useMemo(() => {
     return Object.entries(startups).filter(([id, s]) => {
+      if (filter === 'trending' && !TRENDING_IDS.has(id)) return false;
       if (filter === 'funding' && !(s.status === 'open' || s.status === 'soon')) return false;
       if (filter === 'collab' && !s.collab) return false;
       if (filter === 'saved' && !saved.has(id)) return false;
@@ -63,7 +67,7 @@ export default function Explore() {
   return (
     <div>
       <Topbar />
-      <div className="layout">
+      <div className="layout layout-2col">
         <LeftNav />
         <main className="center-col explore-page">
           <div className="explore-head">
@@ -123,7 +127,6 @@ export default function Explore() {
             </div>
           )}
         </main>
-        <RightRail />
       </div>
     </div>
   );

@@ -5,6 +5,7 @@ import { useApp } from '../context/AppContext';
 const ITEMS = [
   ['home', 'Home', '/feed'],
   ['compass', 'Explore Startups', '/explore'],
+  ['flag', 'Trending Startups', '/explore?filter=trending'],
   ['coin', 'Funding Opportunities', '/explore?filter=funding'],
   ['handshake', 'Collaboration Openings', '/explore?filter=collab'],
   ['bookmark', 'Saved Startups', '/explore?filter=saved'],

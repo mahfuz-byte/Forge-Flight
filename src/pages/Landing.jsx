@@ -1,9 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { Icon } from '../components/IconSprite';
+import { useApp } from '../context/AppContext';
 import '../styles/landing.css';
 
 export default function Landing() {
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useApp();
 
   function scrollTo(id) {
     const el = document.getElementById(id);
@@ -21,6 +23,15 @@ export default function Landing() {
             <a onClick={() => scrollTo('landing-investors')}>For Investors</a>
           </nav>
           <div className="hero-cta-row">
+            <button
+              className="btn btn-ghost-dark theme-button-home"
+              type="button"
+              aria-label={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+              onClick={toggleTheme}
+              title={`Switch to ${theme === 'dark' ? 'light' : 'dark'} mode`}
+            >
+              <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
+            </button>
             <button className="btn btn-ghost-dark" onClick={() => navigate('/login?tab=login')}>Log in</button>
             <button className="btn btn-accent" onClick={() => navigate('/login?tab=register')}>Create account</button>
           </div>

@@ -2,7 +2,6 @@ import { useNavigate } from 'react-router-dom';
 import LogoBadge from './LogoBadge';
 import { useApp } from '../context/AppContext';
 
-const TRENDING = [['healthsync', '2.4k', '68'], ['medai', '1.1k', '27'], ['nimbus', '3.8k', '100'], ['farmchain', '740', '40']];
 const RECOMMENDED = ['ecoride', 'nimbus'];
 
 export default function RightRail() {
@@ -10,19 +9,6 @@ export default function RightRail() {
   const { startups } = useApp();
   return (
     <aside className="side-right">
-      <div className="widget">
-        <h4>Trending Startups</h4>
-        {TRENDING.map(([id, followers, pct]) => {
-          const s = startups[id];
-          return (
-            <div className="trend-row" key={id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${id}`)}>
-              <LogoBadge id={id} initials={s.initials} size={32} />
-              <div><div className="t-name">{s.name}</div><div className="t-meta">{followers} followers</div></div>
-              <span className="t-pct mono">{pct}%</span>
-            </div>
-          );
-        })}
-      </div>
       <div className="widget">
         <h4>Upcoming Funding Deadlines</h4>
         <div className="deadline-row"><span className="d-left">MedAI</span><span className="d-right status-soon" style={{ color: 'var(--warning)' }}>3 days left</span></div>

@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Topbar from '../components/Topbar';
 import LeftNav from '../components/LeftNav';
-import RightRail from '../components/RightRail';
 import FeedCard, { EventCard } from '../components/FeedCard';
 import { nextPostBatch, MORE_POOL_SIZE } from '../data/posts';
 import { useApp } from '../context/AppContext';
@@ -46,7 +45,7 @@ export default function Feed() {
   return (
     <div>
       <Topbar />
-      <div className="layout">
+      <div className="layout layout-2col">
         <LeftNav />
         <main className="center-col">
           <div className="filter-row">
@@ -72,7 +71,6 @@ export default function Feed() {
             {!loading && loadRounds >= MAX_LOAD_ROUNDS && <span className="feed-caught-up">You&rsquo;re all caught up.</span>}
           </div>
         </main>
-        <RightRail />
       </div>
     </div>
   );

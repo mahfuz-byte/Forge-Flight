@@ -15,7 +15,7 @@ const SECTIONS = [
 export default function Settings() {
   const [section, setSection] = useState('account');
   const navigate = useNavigate();
-  const { currentUser, updateCurrentUser, logOut } = useApp();
+  const { currentUser, updateCurrentUser, logOut, theme, setTheme } = useApp();
   const [prefs, setPrefs] = useState({ email: true, funding: true, comments: true, digest: false });
   const [name, setName] = useState(currentUser.name);
   const [email, setEmail] = useState(currentUser.email);
@@ -53,7 +53,8 @@ export default function Settings() {
                   <div className="field"><label htmlFor="s-name">Full name</label><input id="s-name" type="text" value={name} onChange={(e) => setName(e.target.value)} /></div>
                   <div className="field"><label htmlFor="s-email">Email</label><input id="s-email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
                   <div className="field"><label htmlFor="s-bio">Bio</label><textarea id="s-bio" rows="3" value={bio} onChange={(e) => setBio(e.target.value)} /></div>
-                  <button className="btn btn-accent btn-sm" onClick={handleSave}>
+                  <label className="settings-toggle-row"><span>Dark mode</span><input type="checkbox" checked={theme === 'dark'} onChange={() => setTheme(theme === 'dark' ? 'light' : 'dark')} /></label>
+                  <button className="btn btn-accent btn-sm" onClick={handleSave} style={{ marginTop: 18 }}>
                     {saved ? <><Icon name="check" />Saved</> : 'Save changes'}
                   </button>
                 </div>

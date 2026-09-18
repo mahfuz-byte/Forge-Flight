@@ -4,10 +4,19 @@ import { timeAgo } from '../utils/timeAgo';
 
 const AppContext = createContext(null);
 
+const THEME_KEY = 'forge-flight-theme';
+
 const GUEST_USER = {
   id: null, slug: null, name: 'Guest', initials: '?', email: '', bio: '', location: '',
   saved_startups: [], followed_startups: [],
 };
+
+function getInitialTheme() {
+  if (typeof window === 'undefined') return 'light';
+  const stored = window.localStorage.getItem(THEME_KEY);
+  if (stored === 'light' || stored === 'dark') return stored;
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
 
 function transformUser(u) {
   return {
@@ -82,12 +91,23 @@ export function AppProvider({ children }) {
   const [loading, setLoading] = useState(true);
   const [currentUser, setCurrentUser] = useState(GUEST_USER);
   const [signedIn, setSignedIn] = useState(false);
+  const [theme, setTheme] = useState(getInitialTheme);
   const [startups, setStartups] = useState({});
   const [posts, setPosts] = useState([]);
   const [comments, setComments] = useState({});
   const [applications, setApplications] = useState([]);
   const [investments, setInvestments] = useState([]);
   const [postModalOpen, setPostModalOpen] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    document.documentElement.style.colorScheme = theme;
+    window.localStorage.setItem(THEME_KEY, theme);
+  }, [theme]);
+
+  function toggleTheme() {
+    setTheme((cur) => (cur === 'dark' ? 'light' : 'dark'));
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -292,6 +312,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider
       value={{
         currentUser, updateCurrentUser, registerUser, login, logOut, signedIn, setSignedIn,
+        theme, setTheme, toggleTheme,
         startups, createStartup, myStartups, collaboratingIds,
         saved, toggleSaved,
         followed, toggleFollow,
