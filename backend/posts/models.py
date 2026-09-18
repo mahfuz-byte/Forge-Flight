@@ -22,7 +22,9 @@ class Post(models.Model):
     title = models.CharField(max_length=255)
     text = models.TextField(blank=True)
     tags = ArrayField(models.CharField(max_length=40), blank=True, default=list)
-    media = models.CharField(max_length=140, blank=True)
+    media = models.FileField(upload_to='post_media/', blank=True, null=True)
+    likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked_posts', blank=True)
+    pinned = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

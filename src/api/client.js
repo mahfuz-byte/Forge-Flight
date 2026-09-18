@@ -23,14 +23,14 @@ async function request(path, { method = 'GET', body, params } = {}) {
   }
 
   const headers = {};
-  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (body !== undefined && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
   if (needsCsrf) headers['X-CSRFToken'] = getCookie('csrftoken') || '';
 
   const res = await fetch(url, {
     method,
     credentials: 'include',
     headers,
-    body: body !== undefined ? JSON.stringify(body) : undefined,
+    body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
   });
 
   if (res.status === 204) return null;

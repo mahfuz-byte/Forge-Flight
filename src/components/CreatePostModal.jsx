@@ -73,7 +73,7 @@ export default function CreatePostModal() {
         postTitle: title.trim(),
         postText: text.trim(),
         tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
-        media: media.trim() || null,
+        media: typeof media === 'string' ? media.trim() : media,
       });
       reset();
       closeCreatePost();
@@ -127,8 +127,8 @@ export default function CreatePostModal() {
             <input id="cp-tags" type="text" placeholder="AI, Healthcare, Startup" value={tags} onChange={(e) => setTags(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="cp-media">Attachment <span className="field-hint">(image, video, pitch deck, or a link — optional)</span></label>
-            <input id="cp-media" type="text" placeholder="e.g. Demo Video · 1:20" value={media} onChange={(e) => setMedia(e.target.value)} />
+            <label htmlFor="cp-media">Attachment <span className="field-hint">(image, video, document — optional)</span></label>
+            <input id="cp-media" type="file" onChange={(e) => setMedia(e.target.files[0] || '')} />
           </div>
           {error && <p className="modal-error">{error}</p>}
           <div className="modal-actions">

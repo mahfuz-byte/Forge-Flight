@@ -98,12 +98,16 @@ function transformPost(p) {
   return {
     id: p.id,
     startupId: p.startup || undefined,
+    authorId: p.author || undefined,
     type: p.kind === 'event' ? 'event' : undefined,
     postType: p.post_type,
     postTitle: p.title,
     postText: p.text,
     tags: p.tags || [],
     media: p.media || null,
+    likesCount: p.likes_count || 0,
+    isLiked: !!p.is_liked,
+    pinned: !!p.pinned,
     timestamp: timeAgo(p.created_at),
   };
 }
@@ -282,11 +286,43 @@ export function AppProvider({ children }) {
   }
 
   async function addPost(post) {
-    const created = await api.post('/posts/', {
-      startup: post.startupId, post_type: post.postType, title: post.postTitle,
-      text: post.postText, tags: post.tags || [], media: post.media || '',
-    });
+    let body;
+    if (post.media instanceof File) {
+      body = new FormData();
+      body.append('startup', post.startupId);
+      body.append('post_type', post.postType);
+      body.append('title', post.postTitle);
+      body.append('text', post.postText);
+      (post.tags || []).forEach(t => body.append('tags', t));
+      body.append('media', post.media);
+    } else {
+      body = {
+        startup: post.startupId, post_type: post.postType, title: post.postTitle,
+        text: post.postText, tags: post.tags || []
+      };
+    }
+    const created = await api.post('/posts/', body);
     setPosts((cur) => [transformPost(created), ...cur]);
+  }
+
+  async function toggleLikePost(postId) {
+    const data = await api.post(`/posts/${postId}/toggle_like/`);
+    setPosts(cur => cur.map(p => p.id === postId ? { ...p, isLiked: data.is_liked, likesCount: data.likes_count } : p));
+  }
+
+  async function deletePost(postId) {
+    await api.delete(`/posts/${postId}/`);
+    setPosts(cur => cur.filter(p => p.id !== postId));
+  }
+
+  async function pinPost(postId, isPinned) {
+    const data = await api.patch(`/posts/${postId}/`, { pinned: !isPinned });
+    setPosts(cur => cur.map(p => p.id === postId ? { ...p, pinned: data.pinned } : p));
+  }
+
+  async function editPost(postId, newText) {
+    const data = await api.patch(`/posts/${postId}/`, { text: newText });
+    setPosts(cur => cur.map(p => p.id === postId ? { ...p, postText: data.text } : p));
   }
 
   function loadMorePosts(batch) {
@@ -424,7 +460,7 @@ export function AppProvider({ children }) {
         startups, createStartup, myStartups, collaboratingIds,
         saved, toggleSaved,
         followed, toggleFollow,
-        posts, addPost, loadMorePosts,
+        posts, addPost, toggleLikePost, deletePost, pinPost, editPost, loadMorePosts,
         comments, addComment,
         applications, addApplication, setApplicationStatus,
         investments, addInvestment, cancelInvestment, setInvestmentStatus,
