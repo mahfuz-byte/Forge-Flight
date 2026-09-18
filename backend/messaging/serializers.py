@@ -17,13 +17,14 @@ class MessageSerializer(serializers.ModelSerializer):
 
 
 class ConversationSerializer(serializers.ModelSerializer):
+    startup_slug = serializers.ReadOnlyField(source='startup.slug')
     startup_name = serializers.ReadOnlyField(source='startup.name')
     initiator_name = serializers.ReadOnlyField(source='initiator.name')
     messages = MessageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Conversation
-        fields = ['id', 'startup', 'startup_name', 'initiator', 'initiator_name', 'created_at', 'messages']
+        fields = ['id', 'startup', 'startup_slug', 'startup_name', 'initiator', 'initiator_name', 'created_at', 'messages']
         read_only_fields = ['initiator']
 
     def create(self, validated_data):

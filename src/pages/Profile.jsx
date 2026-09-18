@@ -78,10 +78,10 @@ function CollaborationPanel({ id, s, isOwner, navigate }) {
     );
   }
 
-  function handleSubmit(e) {
+  async function handleSubmit(e) {
     e.preventDefault();
     const form = e.target;
-    addApplication({
+    await addApplication({
       type: 'collaboration',
       startupId: id,
       role: s.collab.role,
@@ -137,10 +137,10 @@ export default function Profile() {
     if (location.hash === '#comments') setTab('comments');
   }, [location.hash, id]);
 
-  function submitComment(e) {
+  async function submitComment(e) {
     e.preventDefault();
     if (!commentDraft.trim()) return;
-    addComment(id, commentDraft.trim());
+    await addComment(id, commentDraft.trim());
     setCommentDraft('');
   }
 

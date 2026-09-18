@@ -2,6 +2,8 @@ from django.core.management.base import BaseCommand
 from django.db import transaction
 
 from accounts.models import User
+from messaging.models import Conversation, Message
+from notifications.models import Notification
 from posts.models import Post
 from startups.models import (
     CollaborationRole,
@@ -124,6 +126,16 @@ EVENT_POST = {
     'text': 'Eight startups pitch live to our investor network. RSVP to get a reminder and the stream link.',
 }
 
+DEMO_NOTIFICATIONS = [
+    ('MedAI opened its seed funding round.', 'coin', 'var(--success)', '/profile/medai'),
+    ('Priya Nair commented on your update.', 'comment', 'var(--info)', '/profile/healthsync'),
+    ('Reminder — Pitch Day starts in 2 days.', 'cal', 'var(--info)', '/feed'),
+    ('Lena Torres liked your milestone update.', 'heart', 'var(--accent)', '/profile/healthsync'),
+    ('New application for your Flutter Developer role.', 'handshake', 'var(--warning)', '/profile/farmchain'),
+    ('Nimbus Robotics closed its funding round.', 'check', 'var(--success)', '/profile/nimbus'),
+    ('David Osei started following your startup.', 'user', 'var(--text-muted)', '/profile/healthsync'),
+]
+
 
 def get_or_create_user(full_name, email):
     first, _, last = full_name.partition(' ')
@@ -204,6 +216,47 @@ class Command(BaseCommand):
             )
 
             self.stdout.write(self.style.SUCCESS(f'Seeded {startup.name}'))
+
+        amara = User.objects.get(email='amara@healthsync.io')
+        david = get_or_create_user('David Osei', 'david.osei@example.com')
+        priya = get_or_create_user('Priya Nair', 'priya.nair@example.com')
+        marco = get_or_create_user('Marco Villanueva', 'marco.villanueva@example.com')
+        sophia = get_or_create_user('Sofia Lindqvist', 'sofia.lindqvist@example.com')
+        ines = get_or_create_user('Ines Fontaine', 'ines.fontaine@example.com')
+
+        demo_threads = [
+            ('healthsync', david, [
+                (david, 'Thanks for reaching out about the seed round — happy to walk you through the clinical trial data.', True),
+                (amara, 'Would love that. Do you have 20 minutes this week?', True),
+                (david, "Thursday afternoon works — I'll send a calendar link.", False),
+            ]),
+            ('medai', amara, [
+                (amara, 'Appreciate the regulatory summary — it looks strong.', True),
+                (sophia, "It's thorough — I'll get back to you by Friday.", False),
+            ]),
+            ('farmchain', amara, [
+                (amara, 'The Flutter rebuild looks exciting. What are your top priorities this month?', True),
+                (marco, 'Thanks for applying to the Flutter Developer role — we’ll review this week.', False),
+            ]),
+            ('nimbus', amara, [
+                (amara, 'Congratulations on closing the round — happy to stay in touch.', True),
+                (ines, 'We closed the round — thanks so much for your interest.', False),
+            ]),
+        ]
+
+        for slug, initiator, messages in demo_threads:
+            startup = Startup.objects.get(slug=slug)
+            conversation, _ = Conversation.objects.update_or_create(
+                startup=startup,
+                initiator=initiator,
+            )
+            conversation.messages.all().delete()
+            for sender, text, read in messages:
+                Message.objects.create(conversation=conversation, sender=sender, text=text, read=read)
+
+        Notification.objects.filter(recipient=amara).delete()
+        for text, icon, color, link in DEMO_NOTIFICATIONS:
+            Notification.objects.create(recipient=amara, text=text, icon=icon, color=color, link=link)
 
         Post.objects.filter(kind='event').delete()
         Post.objects.create(kind='event', title=EVENT_POST['title'], text=EVENT_POST['text'])

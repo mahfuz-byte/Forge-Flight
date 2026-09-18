@@ -31,12 +31,20 @@ function StartupTile({ id, s, onView, onManage }) {
 export default function AccountProfile() {
   const [createOpen, setCreateOpen] = useState(false);
   const navigate = useNavigate();
-  const { currentUser, myStartups, collaboratingIds, startups, applications } = useApp();
+  const { currentUser, myStartups, collaboratingIds, startups, applications, saved, followed } = useApp();
 
   function collabRoleFor(startupId) {
     const app = applications.find((a) => a.startupId === startupId && a.applicantId === currentUser.id && a.status === 'accepted');
     return app ? app.role : null;
   }
+
+  const savedStartups = Array.from(saved)
+    .map((id) => [id, startups[id]])
+    .filter(([, s]) => s);
+
+  const followedStartups = Array.from(followed)
+    .map((id) => [id, startups[id]])
+    .filter(([, s]) => s);
 
   return (
     <div>
@@ -99,6 +107,42 @@ export default function AccountProfile() {
                     </div>
                   );
                 })}
+              </div>
+            )}
+          </section>
+
+          <section className="account-section">
+            <h3>Saved Startups</h3>
+            {savedStartups.length === 0 ? (
+              <p className="settings-hint">No saved startups yet. Use Save on any startup profile or feed card.</p>
+            ) : (
+              <div className="startup-grid">
+                {savedStartups.map(([id, s]) => (
+                  <StartupTile
+                    key={id}
+                    id={id}
+                    s={s}
+                    onView={() => navigate(`/profile/${id}`)}
+                  />
+                ))}
+              </div>
+            )}
+          </section>
+
+          <section className="account-section">
+            <h3>Following</h3>
+            {followedStartups.length === 0 ? (
+              <p className="settings-hint">No followed startups yet. Follow a startup to track updates here.</p>
+            ) : (
+              <div className="startup-grid">
+                {followedStartups.map(([id, s]) => (
+                  <StartupTile
+                    key={id}
+                    id={id}
+                    s={s}
+                    onView={() => navigate(`/profile/${id}`)}
+                  />
+                ))}
               </div>
             )}
           </section>

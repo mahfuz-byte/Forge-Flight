@@ -15,16 +15,6 @@ const SECTIONS = [
   ['history', 'Investment History'],
 ];
 
-const MOCK_PORTFOLIO = [
-  { startupId: 'nimbus', amount: 25000, date: 'Jun 2026', roi: '4.2x (est.)' },
-  { startupId: 'ecoride', amount: 12000, date: 'Apr 2026', roi: '2.8x (est.)' },
-];
-
-const MOCK_HISTORY = [
-  { startupId: 'nimbus', amount: 15000, date: 'Mar 2025', roi: '3.1x', outcome: 'Exited' },
-  { startupId: 'ecoride', amount: 8000, date: 'Jan 2025', roi: '1.6x', outcome: 'Exited' },
-];
-
 function WatchlistTab({ saved, startups, navigate }) {
   const list = Object.entries(startups).filter(([id, s]) => saved.has(id) && (s.status === 'open' || s.status === 'soon'));
   return (
@@ -56,41 +46,47 @@ function WatchlistTab({ saved, startups, navigate }) {
   );
 }
 
-function PortfolioTab({ startups, navigate }) {
+function PortfolioTab({ investments, startups, navigate }) {
+  const committed = investments.filter((investment) => investment.status === 'accepted');
   return (
     <div className="settings-card">
       <h4>Investment Portfolio</h4>
-      <p className="settings-hint">Rounds you're currently committed to.</p>
-      {MOCK_PORTFOLIO.map((p, i) => {
-        const s = startups[p.startupId];
-        return (
-          <div className="portfolio-card" key={i} style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${p.startupId}`)}>
-            <LogoBadge id={p.startupId} initials={s.initials} size={44} />
-            <div className="pc-body">
-              <b>{s.name}</b>
-              <span>Invested {p.date}</span>
+      <p className="settings-hint">Rounds the backend has marked as accepted.</p>
+      {committed.length === 0 ? (
+        <p className="settings-hint">No accepted investments yet.</p>
+      ) : (
+        committed.map((inv) => {
+          const s = startups[inv.startupId];
+          return (
+            <div className="portfolio-card" key={inv.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${inv.startupId}`)}>
+              <LogoBadge id={inv.startupId} initials={s.initials} size={44} />
+              <div className="pc-body">
+                <b>{s.name}</b>
+                <span>Accepted {inv.time}</span>
+              </div>
+              <div className="pc-amount">
+                <b>{fmtMoney(inv.amount)}</b>
+                <span>accepted</span>
+              </div>
             </div>
-            <div className="pc-amount">
-              <b>{fmtMoney(p.amount)}</b>
-              <span>{p.roi}</span>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 }
 
 function RequestsTab({ investments, startups, cancelInvestment, navigate }) {
+  const pending = investments.filter((investment) => investment.status === 'pending');
   return (
     <div className="settings-card">
       <h4>Investment Requests</h4>
-      <p className="settings-hint">Pending "Invest Now" requests you've sent this session.</p>
-      {investments.length === 0 ? (
+      <p className="settings-hint">Pending "Invest Now" requests you've sent.</p>
+      {pending.length === 0 ? (
         <p className="settings-hint">No pending requests. Use "Invest Now" on any open funding round to send one.</p>
       ) : (
         <div className="app-list">
-          {investments.map((inv) => {
+          {pending.map((inv) => {
             const s = startups[inv.startupId];
             return (
               <div className="app-row" key={inv.id}>
@@ -115,26 +111,32 @@ function RequestsTab({ investments, startups, cancelInvestment, navigate }) {
 }
 
 function HistoryTab({ startups, navigate }) {
+  const { investments } = useApp();
+  const history = investments.filter((investment) => investment.status !== 'pending');
   return (
     <div className="settings-card">
       <h4>Investment History</h4>
-      <p className="settings-hint">Closed and exited positions.</p>
-      {MOCK_HISTORY.map((h, i) => {
-        const s = startups[h.startupId];
-        return (
-          <div className="portfolio-card" key={i} style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${h.startupId}`)}>
-            <LogoBadge id={h.startupId} initials={s.initials} size={44} />
-            <div className="pc-body">
-              <b>{s.name}</b>
-              <span>{h.date} · {h.outcome}</span>
+      <p className="settings-hint">Accepted or declined requests from the backend.</p>
+      {history.length === 0 ? (
+        <p className="settings-hint">No completed requests yet.</p>
+      ) : (
+        history.map((inv) => {
+          const s = startups[inv.startupId];
+          return (
+            <div className="portfolio-card" key={inv.id} style={{ cursor: 'pointer' }} onClick={() => navigate(`/profile/${inv.startupId}`)}>
+              <LogoBadge id={inv.startupId} initials={s.initials} size={44} />
+              <div className="pc-body">
+                <b>{s.name}</b>
+                <span>{inv.time} · {inv.status}</span>
+              </div>
+              <div className="pc-amount">
+                <b>{fmtMoney(inv.amount)}</b>
+                <span>{inv.status}</span>
+              </div>
             </div>
-            <div className="pc-amount">
-              <b>{fmtMoney(h.amount)}</b>
-              <span>{h.roi} return</span>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })
+      )}
     </div>
   );
 }
@@ -142,8 +144,12 @@ function HistoryTab({ startups, navigate }) {
 export default function InvestorPortfolio() {
   const [section, setSection] = useState('watchlist');
   const navigate = useNavigate();
-  const { saved, startups, investments, cancelInvestment } = useApp();
-  const pendingCount = useMemo(() => investments.filter((i) => i.status === 'pending').length, [investments]);
+  const { currentUser, saved, startups, investments, cancelInvestment } = useApp();
+  const myInvestments = useMemo(
+    () => investments.filter((i) => i.investorId === currentUser.id),
+    [investments, currentUser.id],
+  );
+  const pendingCount = useMemo(() => myInvestments.filter((i) => i.status === 'pending').length, [myInvestments]);
 
   return (
     <div>
@@ -162,8 +168,8 @@ export default function InvestorPortfolio() {
             </nav>
             <div className="settings-panel">
               {section === 'watchlist' && <WatchlistTab saved={saved} startups={startups} navigate={navigate} />}
-              {section === 'portfolio' && <PortfolioTab startups={startups} navigate={navigate} />}
-              {section === 'requests' && <RequestsTab investments={investments} startups={startups} cancelInvestment={cancelInvestment} navigate={navigate} />}
+              {section === 'portfolio' && <PortfolioTab investments={myInvestments} startups={startups} navigate={navigate} />}
+              {section === 'requests' && <RequestsTab investments={myInvestments} startups={startups} cancelInvestment={cancelInvestment} navigate={navigate} />}
               {section === 'history' && <HistoryTab startups={startups} navigate={navigate} />}
             </div>
           </div>

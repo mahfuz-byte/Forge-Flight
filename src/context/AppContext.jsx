@@ -34,6 +34,7 @@ function transformUser(u) {
 
 function transformStartup(s) {
   return {
+    id: s.id,
     name: s.name,
     initials: s.initials,
     verified: s.verified,
@@ -51,6 +52,42 @@ function transformStartup(s) {
     docs: (s.docs || []).map((d) => [d.name, d.size]),
     collab: s.collab ? { role: s.collab.role, body: s.collab.body } : null,
     updates: (s.updates || []).map((u) => u.text),
+  };
+}
+
+function transformConversation(c, currentUserId) {
+  const messages = c.messages || [];
+  const thread = messages.map((m) => ({
+    id: m.id,
+    from: m.sender === currentUserId ? 'me' : 'them',
+    text: m.text,
+    time: timeAgo(m.created_at),
+    read: m.read,
+  }));
+  const lastMessage = messages[messages.length - 1];
+  return {
+    id: c.id,
+    startupId: c.startup,
+    startupSlug: c.startup_slug || '',
+    startupName: c.startup_name || '',
+    initiatorId: c.initiator,
+    initiatorName: c.initiator_name || '',
+    thread,
+    unread: thread.filter((m) => m.from === 'them' && !m.read).length,
+    time: lastMessage ? timeAgo(lastMessage.created_at) : timeAgo(c.created_at),
+    lastAt: lastMessage ? lastMessage.created_at : c.created_at,
+  };
+}
+
+function transformNotification(n) {
+  return {
+    id: n.id,
+    icon: n.icon || 'bell',
+    color: n.color || 'var(--text-muted)',
+    text: n.text,
+    link: n.link || '/feed',
+    read: n.read,
+    time: timeAgo(n.created_at),
   };
 }
 
@@ -97,6 +134,8 @@ export function AppProvider({ children }) {
   const [comments, setComments] = useState({});
   const [applications, setApplications] = useState([]);
   const [investments, setInvestments] = useState([]);
+  const [conversations, setConversations] = useState([]);
+  const [notifications, setNotifications] = useState([]);
   const [postModalOpen, setPostModalOpen] = useState(false);
 
   useEffect(() => {
@@ -107,6 +146,19 @@ export function AppProvider({ children }) {
 
   function toggleTheme() {
     setTheme((cur) => (cur === 'dark' ? 'light' : 'dark'));
+  }
+
+  async function loadInbox(userId) {
+    const [conversationList, notificationList] = await Promise.all([
+      api.get('/conversations/').catch(() => []),
+      api.get('/notifications/').catch(() => []),
+    ]);
+    setConversations(
+      conversationList
+        .map((c) => transformConversation(c, userId))
+        .sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()),
+    );
+    setNotifications(notificationList.map(transformNotification));
   }
 
   useEffect(() => {
@@ -140,6 +192,7 @@ export function AppProvider({ children }) {
         if (cancelled) return;
         setApplications(appList.map(transformApplication));
         setInvestments(investList.map(transformInvestment));
+        await loadInbox(me.id);
       }
 
       setLoading(false);
@@ -159,6 +212,7 @@ export function AppProvider({ children }) {
     ]);
     setApplications(appList.map(transformApplication));
     setInvestments(investList.map(transformInvestment));
+    await loadInbox(user.id);
     return user;
   }
 
@@ -172,6 +226,8 @@ export function AppProvider({ children }) {
     setSignedIn(true);
     setApplications([]);
     setInvestments([]);
+    setConversations([]);
+    setNotifications([]);
     return user;
   }
 
@@ -181,6 +237,8 @@ export function AppProvider({ children }) {
     setSignedIn(false);
     setApplications([]);
     setInvestments([]);
+    setConversations([]);
+    setNotifications([]);
   }
 
   async function updateCurrentUser(patch) {
@@ -271,6 +329,57 @@ export function AppProvider({ children }) {
     setInvestments((cur) => cur.map((i) => (i.id === id ? transformInvestment(updated) : i)));
   }
 
+  async function sendMessage(conversationId, text) {
+    const created = await api.post('/messages/', { conversation: conversationId, text });
+    setConversations((cur) => cur.map((conversation) => {
+      if (conversation.id !== conversationId) return conversation;
+      const nextThread = [...conversation.thread, {
+        id: created.id,
+        from: 'me',
+        text: created.text,
+        time: timeAgo(created.created_at),
+        read: created.read,
+      }];
+      return {
+        ...conversation,
+        thread: nextThread,
+        unread: nextThread.filter((m) => m.from === 'them' && !m.read).length,
+        time: timeAgo(created.created_at),
+        lastAt: created.created_at,
+      };
+    }).sort((a, b) => new Date(b.lastAt).getTime() - new Date(a.lastAt).getTime()));
+  }
+
+  async function markConversationRead(conversationId) {
+    const conversation = conversations.find((c) => c.id === conversationId);
+    if (!conversation) return;
+    const unreadMessages = conversation.thread.filter((m) => m.from === 'them' && !m.read);
+    if (unreadMessages.length === 0) return;
+    await Promise.all(unreadMessages.map((message) => api.patch(`/messages/${message.id}/`, { read: true })));
+    setConversations((cur) => cur.map((c) => {
+      if (c.id !== conversationId) return c;
+      return {
+        ...c,
+        unread: 0,
+        thread: c.thread.map((message) => (message.from === 'them' ? { ...message, read: true } : message)),
+      };
+    }));
+  }
+
+  async function markNotificationRead(notificationId) {
+    await api.patch(`/notifications/${notificationId}/`, { read: true });
+    setNotifications((cur) => cur.map((notification) => (
+      notification.id === notificationId ? { ...notification, read: true } : notification
+    )));
+  }
+
+  async function markAllNotificationsRead() {
+    const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
+    if (unreadIds.length === 0) return;
+    await Promise.all(unreadIds.map((id) => api.patch(`/notifications/${id}/`, { read: true })));
+    setNotifications((cur) => cur.map((notification) => ({ ...notification, read: true })));
+  }
+
   function openCreatePost() {
     setPostModalOpen(true);
   }
@@ -320,6 +429,8 @@ export function AppProvider({ children }) {
         comments, addComment,
         applications, addApplication, setApplicationStatus,
         investments, addInvestment, cancelInvestment, setInvestmentStatus,
+        conversations, sendMessage, markConversationRead,
+        notifications, markNotificationRead, markAllNotificationsRead,
         postModalOpen, openCreatePost, closeCreatePost,
       }}
     >
