@@ -9,7 +9,7 @@ import '../styles/settings.css';
 const SECTIONS = [
   ['account', 'Account'],
   ['notifications', 'Notifications'],
-  ['danger', 'Danger Zone'],
+  ['logout', 'Logout'],
 ];
 
 export default function Settings() {
@@ -70,14 +70,11 @@ export default function Settings() {
                 </div>
               )}
 
-              {section === 'danger' && (
+              {section === 'logout' && (
                 <div className="settings-card">
                   <h4>Log out</h4>
                   <p className="settings-hint">End your current session on this device.</p>
                   <button className="btn btn-outline btn-sm" onClick={async () => { await logOut(); navigate('/'); }}>Log out</button>
-                  <h4 style={{ marginTop: 26 }}>Danger zone</h4>
-                  <p className="settings-hint">Deactivating your account hides your startups and pauses all their funding windows.</p>
-                  <button className="btn btn-outline btn-sm" style={{ borderColor: 'var(--accent)', color: 'var(--accent)' }}>Deactivate account</button>
                 </div>
               )}
             </div>
