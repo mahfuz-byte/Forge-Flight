@@ -27,6 +27,15 @@ function transformUser(u) {
     email: u.email,
     bio: u.bio || '',
     location: u.location || '',
+    avatar: u.avatar ? (u.avatar.startsWith('http') ? u.avatar : `http://127.0.0.1:8000${u.avatar}`) : null,
+    headline: u.headline || '',
+    resume: u.resume ? (u.resume.startsWith('http') ? u.resume : `http://127.0.0.1:8000${u.resume}`) : null,
+    skills: u.skills || '',
+    experience_level: u.experience_level || '',
+    portfolio_link: u.portfolio_link || '',
+    investor_type: u.investor_type || '',
+    investment_budget: u.investment_budget || '',
+    investment_interests: u.investment_interests || '',
     saved_startups: u.saved_startups || [],
     followed_startups: u.followed_startups || [],
   };
@@ -245,6 +254,14 @@ export function AppProvider({ children }) {
   }
 
   async function updateCurrentUser(patch) {
+    if (patch instanceof FormData) {
+      const updated = await api.patch('/auth/me/', patch, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      setCurrentUser(transformUser(updated));
+      return;
+    }
+
     const body = {};
     if (patch.name !== undefined) {
       const [first, ...rest] = patch.name.trim().split(' ');
@@ -254,6 +271,14 @@ export function AppProvider({ children }) {
     if (patch.email !== undefined) body.email = patch.email;
     if (patch.bio !== undefined) body.bio = patch.bio;
     if (patch.location !== undefined) body.location = patch.location;
+    if (patch.headline !== undefined) body.headline = patch.headline;
+    if (patch.skills !== undefined) body.skills = patch.skills;
+    if (patch.experience_level !== undefined) body.experience_level = patch.experience_level;
+    if (patch.portfolio_link !== undefined) body.portfolio_link = patch.portfolio_link;
+    if (patch.investor_type !== undefined) body.investor_type = patch.investor_type;
+    if (patch.investment_budget !== undefined) body.investment_budget = patch.investment_budget;
+    if (patch.investment_interests !== undefined) body.investment_interests = patch.investment_interests;
+
     const updated = await api.patch('/auth/me/', body);
     setCurrentUser(transformUser(updated));
   }

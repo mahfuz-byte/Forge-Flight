@@ -1,17 +1,101 @@
-.account-page { padding: 28px 28px 60px; max-width: 900px; }
+.account-page { padding: 0 0 60px; max-width: 900px; margin: 0 auto; }
 
-.account-header { display: flex; align-items: flex-start; gap: 20px; margin-bottom: 40px; flex-wrap: wrap; }
-.account-avatar {
-  width: 76px; height: 76px; border-radius: 50%; background: var(--c-umber); color: var(--c-paper);
-  display: flex; align-items: center; justify-content: center; font-family: 'Big Shoulders Display';
-  font-size: 24px; font-weight: 700; flex-shrink: 0;
+.account-banner {
+  height: 140px;
+  border-radius: 0 0 16px 16px;
+  position: relative;
+  margin-bottom: 60px;
 }
-.account-header-body { flex: 1; min-width: 200px; }
-.account-header-body h2 { font-size: 1.7rem; margin-bottom: 4px; }
-.account-meta { font-size: 12.5px; color: var(--text-faint); font-family: 'IBM Plex Mono'; margin-bottom: 8px; }
-.account-bio { font-size: 13.5px; color: var(--text-muted); line-height: 1.6; max-width: 480px; }
 
-.account-section { margin-bottom: 40px; }
+.account-header { 
+  display: flex; align-items: flex-end; gap: 24px; flex-wrap: wrap; 
+  padding: 0 32px;
+  margin-top: -50px;
+  position: relative;
+  z-index: 2;
+}
+
+.account-avatar {
+  width: 100px; height: 100px; border-radius: 50%; background: var(--c-umber); color: var(--c-paper);
+  display: flex; align-items: center; justify-content: center; font-family: 'Big Shoulders Display';
+  font-size: 32px; font-weight: 700; flex-shrink: 0;
+  border: 4px solid var(--bg);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+  background-size: cover;
+  background-position: center;
+}
+
+.account-header-body { flex: 1; min-width: 200px; margin-bottom: 4px; }
+.account-header-body h2 { font-size: 2rem; margin-bottom: 4px; letter-spacing: -0.5px; }
+.account-headline { font-size: 14px; font-weight: 600; color: var(--accent); margin-bottom: 6px; }
+.account-meta { font-size: 12.5px; color: var(--text-faint); font-family: 'IBM Plex Mono'; margin-bottom: 8px; }
+.account-bio { font-size: 14px; color: var(--text-muted); line-height: 1.6; max-width: 500px; }
+
+.account-details-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  padding: 0 32px;
+  margin-bottom: 48px;
+}
+
+.profile-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+  transition: transform 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+.profile-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(0,0,0,0.08);
+  border-color: var(--accent-alpha);
+}
+.profile-card h4 {
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--text);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 12px;
+}
+.profile-card-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 14px;
+}
+.profile-card-item b {
+  color: var(--text-muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+.profile-card-item span {
+  color: var(--text);
+}
+
+.skill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.skill-tag {
+  background: var(--accent-alpha);
+  color: var(--accent);
+  padding: 4px 10px;
+  border-radius: 100px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.account-section { padding: 0 32px; margin-bottom: 48px; }
 .account-section-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 16px; }
 .account-section h3 { font-size: 1.15rem; margin-bottom: 16px; }
 .account-section-head h3 { margin-bottom: 0; }

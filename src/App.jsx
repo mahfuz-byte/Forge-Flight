@@ -10,7 +10,6 @@ import Profile from './pages/Profile';
 import Explore from './pages/Explore';
 import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
-import Settings from './pages/Settings';
 import FounderDashboard from './pages/FounderDashboard';
 import AccountProfile from './pages/AccountProfile';
 
@@ -28,7 +27,6 @@ export default function App() {
           <Route path="/explore" element={<Explore />} />
           <Route path="/messages" element={<Messages />} />
           <Route path="/notifications" element={<Notifications />} />
-          <Route path="/settings" element={<Settings />} />
           <Route path="/account" element={<AccountProfile />} />
           <Route path="/dashboard/:id" element={<FounderDashboard />} />
           <Route path="*" element={<Landing />} />

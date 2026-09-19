@@ -4,6 +4,7 @@ import Topbar from '../components/Topbar';
 import LeftNav from '../components/LeftNav';
 import LogoBadge from '../components/LogoBadge';
 import CreateStartupModal from '../components/CreateStartupModal';
+import EditProfileModal from '../components/EditProfileModal';
 import { Icon } from '../components/IconSprite';
 import { statusMeta, fmtMoney } from '../data/startups';
 import { useApp } from '../context/AppContext';
@@ -31,6 +32,7 @@ function StartupTile({ id, s, onView, onManage }) {
 export default function AccountProfile() {
   const [createOpen, setCreateOpen] = useState(false);
   const [portfolioTab, setPortfolioTab] = useState('portfolio');
+  const [editOpen, setEditOpen] = useState(false);
   const navigate = useNavigate();
   const { currentUser, myStartups, collaboratingIds, startups, applications, saved, followed, investments, cancelInvestment } = useApp();
 
@@ -62,24 +64,79 @@ export default function AccountProfile() {
 
   return (
     <div>
+      <EditProfileModal open={editOpen} onClose={() => setEditOpen(false)} />
       <Topbar />
       <div className="layout layout-2col">
         <LeftNav />
         <main className="center-col account-page">
+          <div className="account-banner" style={
+            currentUser.avatar 
+              ? { backgroundImage: `url(${currentUser.avatar})`, backgroundSize: 'cover', backgroundPosition: 'center', filter: 'brightness(0.7)' } 
+              : { background: 'transparent' }
+          }></div>
           <div className="account-header">
-            <div className="account-avatar">{currentUser.initials}</div>
+            <div className="account-avatar" style={currentUser.avatar ? { backgroundImage: `url(${currentUser.avatar})`, color: 'transparent' } : {}}>
+              {!currentUser.avatar && currentUser.initials}
+            </div>
             <div className="account-header-body">
               <h2>{currentUser.name}</h2>
+              {currentUser.headline && <p className="account-headline">{currentUser.headline}</p>}
               <p className="account-meta">{currentUser.email}{currentUser.location ? ` · ${currentUser.location}` : ''}</p>
               <p className="account-bio">{currentUser.bio}</p>
             </div>
-            <button className="btn btn-outline btn-sm" onClick={() => navigate('/settings')}>Edit profile</button>
+            <button className="btn btn-outline btn-sm" onClick={() => setEditOpen(true)} style={{marginBottom: 4}}><Icon name="edit" /> Edit profile</button>
+          </div>
+
+          <div className="account-details-grid">
+            <div className="profile-card">
+              <h4><Icon name="user" /> Collaborator Profile</h4>
+              {currentUser.experience_level || currentUser.skills || currentUser.portfolio_link || currentUser.resume ? (
+                <>
+                  {currentUser.experience_level && <div className="profile-card-item"><b>Experience</b><span>{currentUser.experience_level}</span></div>}
+                  {currentUser.skills && (
+                    <div className="profile-card-item">
+                      <b>Skills</b>
+                      <div className="skill-tags">
+                        {currentUser.skills.split(',').map((skill, i) => (
+                          <span key={i} className="skill-tag">{skill.trim()}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {currentUser.portfolio_link && <div className="profile-card-item"><b>Portfolio</b><a href={currentUser.portfolio_link} target="_blank" rel="noreferrer" style={{color: 'var(--accent)', textDecoration: 'none', fontWeight: 500}}>{currentUser.portfolio_link.replace(/^https?:\/\//, '')}</a></div>}
+                  {currentUser.resume && <div className="profile-card-item"><b>Resume</b><a href={currentUser.resume} target="_blank" rel="noreferrer" style={{color: 'var(--accent)', textDecoration: 'none', fontWeight: 500}}>View Document &rarr;</a></div>}
+                </>
+              ) : (
+                <p className="settings-hint">No collaborator details added.</p>
+              )}
+            </div>
+
+            <div className="profile-card">
+              <h4><Icon name="pie" /> Investor Profile</h4>
+              {currentUser.investor_type || currentUser.investment_budget || currentUser.investment_interests ? (
+                <>
+                  {currentUser.investor_type && <div className="profile-card-item"><b>Investor Type</b><span>{currentUser.investor_type}</span></div>}
+                  {currentUser.investment_budget && <div className="profile-card-item"><b>Typical Budget</b><span>{currentUser.investment_budget}</span></div>}
+                  {currentUser.investment_interests && (
+                    <div className="profile-card-item">
+                      <b>Interests</b>
+                      <div className="skill-tags">
+                        {currentUser.investment_interests.split(',').map((interest, i) => (
+                          <span key={i} className="skill-tag" style={{background: 'var(--info-alpha)', color: 'var(--info)'}}>{interest.trim()}</span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <p className="settings-hint">No investor details added.</p>
+              )}
+            </div>
           </div>
 
           <section className="account-section">
             <div className="account-section-head">
               <h3>My Startups</h3>
-              <button className="btn btn-accent btn-sm" onClick={() => setCreateOpen(true)}><Icon name="bolt" />Create Startup</button>
             </div>
             {myStartups.length === 0 ? (
               <p className="settings-hint">You haven't created a startup yet — click "Create Startup" to publish your first page.</p>

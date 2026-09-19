@@ -8,8 +8,23 @@ class User(AbstractUser):
     username = None
     email = models.EmailField(unique=True)
     slug = models.SlugField(unique=True, blank=True)
+    
+    # General Profile
+    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    headline = models.CharField(max_length=120, blank=True)
     bio = models.TextField(blank=True)
     location = models.CharField(max_length=120, blank=True)
+    
+    # Collaborator Profile
+    resume = models.FileField(upload_to='resumes/', null=True, blank=True)
+    skills = models.CharField(max_length=255, blank=True) # Comma-separated list
+    experience_level = models.CharField(max_length=50, blank=True)
+    portfolio_link = models.URLField(blank=True)
+    
+    # Investor Profile
+    investor_type = models.CharField(max_length=50, blank=True)
+    investment_budget = models.CharField(max_length=100, blank=True)
+    investment_interests = models.CharField(max_length=255, blank=True)
 
     saved_startups = models.ManyToManyField(
         'startups.Startup', related_name='saved_by', blank=True,
