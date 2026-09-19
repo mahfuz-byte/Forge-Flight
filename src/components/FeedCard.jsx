@@ -141,19 +141,19 @@ function FounderPanel({ post, onEdit, onDelete, onPin, myStartups }) {
             
             <div className="stat-grid dash-stats" style={{ marginBottom: 24, gap: '12px', display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
               <div className="stat-tile" style={{ background: 'var(--bg)', padding: '16px 20px', borderRadius: '8px' }}>
-                <b style={{ display: 'block', fontSize: '28px', color: 'var(--text)', marginBottom: '4px' }}>1,284</b>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Profile Views</span>
+                <b style={{ display: 'block', fontSize: '28px', color: 'var(--text)', marginBottom: '4px' }}>{post.likesCount || 0}</b>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Likes</span>
               </div>
               <div className="stat-tile" style={{ background: 'var(--bg)', padding: '16px 20px', borderRadius: '8px' }}>
-                <b style={{ display: 'block', fontSize: '28px', color: 'var(--text)', marginBottom: '4px' }}>6,940</b>
-                <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Post Impressions</span>
+                <b style={{ display: 'block', fontSize: '28px', color: 'var(--text)', marginBottom: '4px' }}>{(post.likesCount || 0) * 3}</b>
+                <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Views (est.)</span>
               </div>
               <div className="stat-tile" style={{ background: 'var(--bg)', padding: '16px 20px', borderRadius: '8px' }}>
-                <b style={{ display: 'block', fontSize: '28px', color: 'var(--text)', marginBottom: '4px' }}>7.8%</b>
+                <b style={{ display: 'block', fontSize: '28px', color: 'var(--text)', marginBottom: '4px' }}>{post.likesCount ? `${Math.round(((post.likesCount || 0) / ((post.likesCount || 0) * 3)) * 100)}%` : '0%'}</b>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Engagement Rate</span>
               </div>
               <div className="stat-tile" style={{ background: 'var(--bg)', padding: '16px 20px', borderRadius: '8px' }}>
-                <b style={{ display: 'block', fontSize: '28px', color: 'var(--text)', marginBottom: '4px' }}>2.4k</b>
+                <b style={{ display: 'block', fontSize: '28px', color: 'var(--text)', marginBottom: '4px' }}>{post.followerCount || 0}</b>
                 <span style={{ fontSize: '12px', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Followers</span>
               </div>
             </div>
