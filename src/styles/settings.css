@@ -20,3 +20,14 @@
   .settings-shell { grid-template-columns: 1fr; }
   .settings-nav { flex-direction: row; overflow-x: auto; position: static; }
 }
+
+/* Destructive actions (startup deletion). */
+.danger-zone { border-color: color-mix(in srgb, var(--accent-strong) 45%, var(--border)); }
+.btn-danger { background: var(--accent-strong); color: var(--c-paper, #fff); border: 1px solid var(--accent-strong); }
+.btn-danger:disabled { opacity: 0.45; cursor: not-allowed; }
+.settings-card + .settings-card { margin-top: 18px; }
+.settings-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 12px 0; border-top: 1px solid var(--border); }
+.settings-row:first-of-type { border-top: none; }
+.settings-row .settings-row-text { min-width: 0; flex: 1 1 220px; }
+.settings-row .settings-row-text b { display: block; font-size: 14px; }
+.settings-row .settings-row-text span { font-size: 12.5px; color: var(--text-faint); }

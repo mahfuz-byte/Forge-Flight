@@ -15,6 +15,7 @@ const SECTIONS = [
   ['collab', 'Manage Collaboration'],
   ['applications', 'Applications'],
   ['analytics', 'Analytics'],
+  ['settings', 'Settings'],
 ];
 
 const WEEK_VIEWS = [
@@ -209,6 +210,73 @@ function ApplicationsTab({ id, applications, investments, setApplicationStatus, 
   );
 }
 
+// Edit the startup's public details, or delete it (FE-10).
+function StartupSettingsTab({ id, s, updateStartup, deleteStartup, navigate }) {
+  const [name, setName] = useState(s.name);
+  const [tagline, setTagline] = useState(s.tagline || '');
+  const [tags, setTags] = useState((s.tags || []).join(', '));
+  const [overview, setOverview] = useState(s.overview || '');
+  const [confirmText, setConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState('');
+
+  function save() {
+    if (!name.trim()) return Promise.reject(new Error('Your startup needs a name.'));
+    return updateStartup(id, {
+      name: name.trim(),
+      tagline: tagline.trim(),
+      tags: tags.split(',').map((t) => t.trim()).filter(Boolean),
+      overview: overview.trim(),
+    });
+  }
+
+  async function handleDelete() {
+    setDeleting(true);
+    setDeleteError('');
+    try {
+      await deleteStartup(id);
+      navigate('/account');
+    } catch (err) {
+      setDeleteError(err.message || 'Could not delete this startup.');
+      setDeleting(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="settings-card">
+        <h4>Startup details</h4>
+        <div className="field"><label htmlFor="ss-name">Name</label><input id="ss-name" type="text" maxLength={140} value={name} onChange={(e) => setName(e.target.value)} /></div>
+        <div className="field"><label htmlFor="ss-tagline">Tagline</label><input id="ss-tagline" type="text" maxLength={255} value={tagline} onChange={(e) => setTagline(e.target.value)} /></div>
+        <div className="field"><label htmlFor="ss-tags">Industry tags <span className="field-hint">(comma separated)</span></label><input id="ss-tags" type="text" value={tags} onChange={(e) => setTags(e.target.value)} /></div>
+        <div className="field"><label htmlFor="ss-overview">Overview</label><textarea id="ss-overview" rows="6" value={overview} onChange={(e) => setOverview(e.target.value)} /></div>
+        <SaveButton onSave={save} />
+      </div>
+
+      <div className="settings-card danger-zone">
+        <h4>Delete startup</h4>
+        <p className="settings-hint">
+          This permanently removes {s.name}, its posts, comments, documents and pending requests. It can&rsquo;t be undone.
+          Startups with accepted investments can&rsquo;t be deleted; close the funding round instead.
+        </p>
+        <div className="field">
+          <label htmlFor="ss-confirm">Type <b>{s.name}</b> to confirm</label>
+          <input id="ss-confirm" type="text" value={confirmText} onChange={(e) => setConfirmText(e.target.value)} autoComplete="off" />
+        </div>
+        <button
+          type="button"
+          className="btn btn-danger btn-sm"
+          disabled={confirmText !== s.name || deleting}
+          onClick={handleDelete}
+        >
+          {deleting ? 'Deleting…' : 'Delete startup permanently'}
+        </button>
+        {deleteError && <p className="modal-error" role="alert" style={{ marginTop: 10 }}>{deleteError}</p>}
+      </div>
+    </>
+  );
+}
+
 function AnalyticsTab() {
   const max = Math.max(...WEEK_VIEWS.map(([, v]) => v));
   return (
@@ -239,7 +307,7 @@ export default function FounderDashboard() {
   const navigate = useNavigate();
   const {
     currentUser, startups, applications, investments, setApplicationStatus, setInvestmentStatus,
-    updateFunding, saveCollaboration,
+    updateFunding, saveCollaboration, updateStartup, deleteStartup,
   } = useApp();
   const s = startups[id];
   const isOwner = !!s && s.ownerId === currentUser.id;
@@ -303,6 +371,9 @@ export default function FounderDashboard() {
                 />
               )}
               {section === 'analytics' && <AnalyticsTab />}
+              {section === 'settings' && (
+                <StartupSettingsTab id={id} s={s} updateStartup={updateStartup} deleteStartup={deleteStartup} navigate={navigate} />
+              )}
             </div>
           </div>
         </main>

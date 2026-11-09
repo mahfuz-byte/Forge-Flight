@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './IconSprite';
 import { useApp } from '../context/AppContext';
+import Avatar from './Avatar';
 import '../styles/modal.css';
 
 export default function CreateStartupModal({ open, onClose }) {
@@ -66,7 +67,7 @@ export default function CreateStartupModal({ open, onClose }) {
         </div>
 
         <div className="modal-poster">
-          <div className="avatar">{currentUser.initials}</div>
+          <Avatar src={currentUser.avatar} name={currentUser.name} initials={currentUser.initials} />
           <div><b>{currentUser.name}</b><span>You'll be listed as Founder &amp; CEO</span></div>
         </div>
 

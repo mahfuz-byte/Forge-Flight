@@ -7,6 +7,7 @@ import CreateStartupModal from '../components/CreateStartupModal';
 import EditProfileModal from '../components/EditProfileModal';
 import { Icon } from '../components/IconSprite';
 import { statusMeta, fmtMoney } from '../data/startups';
+import RequestStatus from '../components/RequestStatus';
 import { useApp } from '../context/AppContext';
 import '../styles/settings.css';
 import '../styles/account.css';
@@ -34,7 +35,11 @@ export default function AccountProfile() {
   const [portfolioTab, setPortfolioTab] = useState('portfolio');
   const [editOpen, setEditOpen] = useState(false);
   const navigate = useNavigate();
-  const { currentUser, myStartups, collaboratingIds, startups, applications, saved, followed, investments, cancelInvestment } = useApp();
+  const {
+    currentUser, myStartups, collaboratingIds, startups, applications, saved, followed, investments, cancelInvestment,
+    withdrawApplication,
+  } = useApp();
+  const myApplications = applications.filter((a) => a.applicantId === currentUser.id);
 
   function collabRoleFor(startupId) {
     const app = applications.find((a) => a.startupId === startupId && a.applicantId === currentUser.id && a.status === 'accepted');
@@ -183,6 +188,39 @@ export default function AccountProfile() {
           </section>
 
           <section className="account-section">
+            <h3>My Applications</h3>
+            {myApplications.length === 0 ? (
+              <p className="settings-hint">Collaboration roles you apply for will show up here with their status.</p>
+            ) : (
+              <div className="app-list">
+                {myApplications.map((a) => {
+                  const s = startups[a.startupId];
+                  return (
+                    <div className="app-row" key={a.id}>
+                      <div className="app-row-main">
+                        <b>{a.role || 'Collaboration role'} · {s ? s.name : 'Startup removed'}</b>
+                        <span className="app-row-meta">Applied {a.time}</span>
+                      </div>
+                      <div className="app-row-actions">
+                        <RequestStatus status={a.status} />
+                        {a.status === 'pending' && (
+                          <button
+                            type="button"
+                            className="btn btn-outline btn-sm"
+                            onClick={() => withdrawApplication(a.id).catch((err) => window.alert(err.message))}
+                          >
+                            Withdraw
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </section>
+
+          <section className="account-section">
             <h3>Saved Startups</h3>
             {savedStartups.length === 0 ? (
               <p className="settings-hint">No saved startups yet. Use Save on any startup profile or feed card.</p>
@@ -289,9 +327,9 @@ export default function AccountProfile() {
             {portfolioTab === 'history' && (
               <div className="settings-card">
                 <h4>Investment History</h4>
-                <p className="settings-hint">Completed investment requests from the backend.</p>
+                <p className="settings-hint">Requests that were accepted, rejected or withdrawn.</p>
                 {historyInvestments.length === 0 ? (
-                  <p className="settings-hint">No completed requests yet.</p>
+                  <p className="settings-hint">No decided requests yet.</p>
                 ) : (
                   <div className="startup-grid">
                     {historyInvestments.map((inv) => {
@@ -300,10 +338,11 @@ export default function AccountProfile() {
                         <div className="startup-tile" key={inv.id}>
                           <div className="startup-tile-head">
                             <LogoBadge id={inv.startupId} initials={s.initials} size={46} />
-                            <span className="status-pill status-closed">{inv.status}</span>
+                            <RequestStatus status={inv.status} />
                           </div>
                           <h4>{s.name}</h4>
-                          <p>{inv.time} · {inv.status}</p>
+                          <p>{fmtMoney(inv.amount)} · {inv.time}</p>
+                          {inv.note && <p className="settings-hint" style={{ marginTop: 4 }}>“{inv.note}”</p>}
                         </div>
                       );
                     })}

@@ -2,16 +2,21 @@ from django.db.models import Q
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.parsers import FormParser, JSONParser, MultiPartParser
 from rest_framework.response import Response
 
 from accounts.models import Role
 from accounts.permissions import IsOwnerOrReadOnly
+from audit.log import record
 from audit.mixins import AuditStaffActionsMixin
+from notifications.services import notify
 from . import services
 from .models import Application, Investment, StartupComment, Startup
 from .serializers import (
     ApplicationSerializer,
     CollaborationRoleSerializer,
+    Conflict,
+    DocumentSerializer,
     InvestmentSerializer,
     StartupCommentSerializer,
     StartupDetailSerializer,
@@ -62,6 +67,40 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
         instance = write_serializer.save()
         return Response(StartupDetailSerializer(instance).data)
 
+    def perform_destroy(self, instance):
+        # Deleting a startup would cascade-delete investment history (FE-10).
+        if instance.investments.filter(status__in=Investment.COUNTED_STATUSES).exists():
+            raise Conflict(
+                "This startup has accepted investments, so it can't be deleted. "
+                'Close the funding round instead, or contact support.'
+            )
+        self.audit_if_staff(instance, 'delete')
+        record('startup.delete', instance, owner_id=instance.owner_id)
+        instance.delete()
+
+    @action(
+        detail=True, methods=['post'], url_path='documents',
+        parser_classes=[MultiPartParser, FormParser, JSONParser],
+    )
+    def add_document(self, request, slug=None):
+        """Upload a pitch deck or other document (owner only, FE-09)."""
+        startup = self.get_object()
+        serializer = DocumentSerializer(data=request.data, context={'request': request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save(startup=startup, order=startup.docs.count())
+        return Response(serializer.data, status=201)
+
+    @action(detail=True, methods=['delete'], url_path=r'documents/(?P<doc_id>\d+)')
+    def remove_document(self, request, slug=None, doc_id=None):
+        startup = self.get_object()
+        doc = startup.docs.filter(pk=doc_id).first()
+        if doc is None:
+            return Response({'detail': 'Document not found.'}, status=404)
+        if doc.file:
+            doc.file.delete(save=False)
+        doc.delete()
+        return Response(status=204)
+
     @action(detail=True, methods=['put', 'patch'], url_path='collaboration')
     def collaboration(self, request, slug=None):
         """Create/update the collaboration listing; ``is_open`` publishes it (BE-07)."""
@@ -92,7 +131,12 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def follow(self, request, slug=None):
         startup = self.get_object()
-        request.user.followed_startups.add(startup)
+        if not request.user.followed_startups.filter(pk=startup.pk).exists():
+            request.user.followed_startups.add(startup)
+            notify(
+                startup.owner, f'{request.user.name} started following {startup.name}.',
+                f'/profile/{startup.pk}', icon='user', color='info', actor=request.user,
+            )
         return Response(status=204)
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
@@ -116,7 +160,11 @@ class StartupCommentViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
         return qs.filter(startup__slug=startup_slug) if startup_slug else qs
 
     def perform_create(self, serializer):
-        serializer.save(author=self.request.user)
+        comment = serializer.save(author=self.request.user)
+        notify(
+            comment.startup.owner, f'{self.request.user.name} commented on {comment.startup.name}: "{comment.text[:80]}"',
+            f'/profile/{comment.startup_id}', icon='comment', color='info', actor=self.request.user,
+        )
 
 
 class ApplicationViewSet(viewsets.ModelViewSet):

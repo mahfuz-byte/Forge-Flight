@@ -2,11 +2,21 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './IconSprite';
 import { useApp } from '../context/AppContext';
+import Avatar from './Avatar';
 
 export default function Topbar() {
   const [open, setOpen] = useState(null); // 'notif' | 'menu' | null
   const navigate = useNavigate();
-  const { currentUser, logOut, theme, toggleTheme } = useApp();
+  const {
+    currentUser, logOut, theme, toggleTheme, signedIn, notifications, unreadNotificationCount, markNotificationRead,
+  } = useApp();
+  const latest = notifications.slice(0, 5);
+
+  async function openNotification(n) {
+    setOpen(null);
+    if (!n.read) markNotificationRead(n.id).catch(() => {});
+    navigate(n.link || '/notifications');
+  }
 
   function toggle(key) {
     setOpen((cur) => (cur === key ? null : key));
@@ -43,22 +53,46 @@ export default function Topbar() {
           <span aria-hidden="true">{theme === 'dark' ? '☀' : '☾'}</span>
         </button>
         <div style={{ position: 'relative' }}>
-          <button className="icon-btn" data-dropdown="notif" aria-label="Notifications" onClick={() => toggle('notif')}>
-            <Icon name="bell" /><span className="dot" />
+          <button
+            className="icon-btn"
+            data-dropdown="notif"
+            aria-label={unreadNotificationCount ? `Notifications, ${unreadNotificationCount} unread` : 'Notifications'}
+            onClick={() => toggle('notif')}
+          >
+            <Icon name="bell" />{unreadNotificationCount > 0 && <span className="dot" />}
           </button>
           {open === 'notif' && (
             <div className="dropdown" data-panel="notif">
               <h4>Notifications</h4>
-              <div className="notif-item"><span className="n-dot" /><div><p><b>MedAI</b> opened its seed funding round.</p><time>12m ago</time></div></div>
-              <div className="notif-item"><span className="n-dot" /><div><p><b>Priya Nair</b> commented on your update.</p><time>1h ago</time></div></div>
-              <div className="notif-item"><span className="n-dot" style={{ background: 'var(--info)' }} /><div><p>Reminder — <b>Pitch Day</b> starts in 2 days.</p><time>3h ago</time></div></div>
+              {!signedIn ? (
+                <p className="notif-empty">Sign in to see your notifications.</p>
+              ) : latest.length === 0 ? (
+                <p className="notif-empty">You&rsquo;re all caught up.</p>
+              ) : latest.map((n) => (
+                <button
+                  type="button"
+                  key={n.id}
+                  className="notif-item"
+                  style={{ width: '100%', textAlign: 'left', background: 'none', border: 'none', cursor: 'pointer', opacity: n.read ? 0.65 : 1 }}
+                  onClick={() => openNotification(n)}
+                >
+                  <span className="n-dot" style={{ background: n.read ? 'var(--border)' : n.color }} />
+                  <div><p>{n.text}</p><time>{n.time}</time></div>
+                </button>
+              ))}
               <button className="menu-item" style={{ justifyContent: 'center', color: 'var(--accent)', fontWeight: 700 }} onClick={() => { setOpen(null); navigate('/notifications'); }}>
                 View all notifications
               </button>
             </div>
           )}
         </div>
-        <button className="avatar" onClick={() => navigate('/account')} title="Your account">{currentUser.initials}</button>
+        <Avatar
+          src={currentUser.avatar}
+          name={currentUser.name}
+          initials={currentUser.initials}
+          title="Your account"
+          onClick={() => navigate('/account')}
+        />
         <div style={{ position: 'relative' }}>
           <button className="icon-btn" data-dropdown="menu" aria-label="Account menu" onClick={() => toggle('menu')}>
             <Icon name="chev" />

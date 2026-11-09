@@ -68,6 +68,26 @@ class DocumentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Document
         fields = ['id', 'name', 'size', 'file', 'order']
+        read_only_fields = ['size', 'order']
+        extra_kwargs = {'name': {'required': False}}
+
+    def validate(self, attrs):
+        if self.instance is None and not attrs.get('file'):
+            raise serializers.ValidationError({'file': ['Choose a file to upload.']})
+        return attrs
+
+    def create(self, validated_data):
+        f = validated_data['file']
+        validated_data['name'] = (validated_data.get('name') or f.name)[:140]
+        validated_data['size'] = _human_size(f.size)
+        return super().create(validated_data)
+
+
+def _human_size(n):
+    for unit in ('B', 'KB', 'MB'):
+        if n < 1024 or unit == 'MB':
+            return f'{n:.0f} {unit}' if unit == 'B' else f'{n:.1f} {unit}'
+        n /= 1024
 
 
 class UpdateEntrySerializer(serializers.ModelSerializer):
@@ -78,15 +98,17 @@ class UpdateEntrySerializer(serializers.ModelSerializer):
 
 class StartupCommentSerializer(StartupImmutableOnUpdateMixin, serializers.ModelSerializer):
     author_name = serializers.ReadOnlyField(source='author.name')
+    author_avatar = serializers.ImageField(source='author.avatar', read_only=True)
 
     class Meta:
         model = StartupComment
-        fields = ['id', 'startup', 'author', 'author_name', 'text', 'created_at']
+        fields = ['id', 'startup', 'author', 'author_name', 'author_avatar', 'text', 'created_at']
         read_only_fields = ['author']
 
 
 class StartupDetailSerializer(serializers.ModelSerializer):
     founder = serializers.ReadOnlyField(source='owner.name')
+    founder_avatar = serializers.ImageField(source='owner.avatar', read_only=True)
     funding_pct = serializers.ReadOnlyField()
     collab = CollaborationRoleSerializer(read_only=True)
     team = TeamMemberSerializer(many=True, read_only=True)
@@ -98,7 +120,7 @@ class StartupDetailSerializer(serializers.ModelSerializer):
     class Meta:
         model = Startup
         fields = [
-            'slug', 'name', 'initials', 'verified', 'owner', 'founder',
+            'slug', 'name', 'initials', 'verified', 'owner', 'founder', 'founder_avatar',
             'tagline', 'status', 'tags', 'goal', 'raised', 'funding_pct',
             'deadline', 'overview', 'created_at', 'updated_at',
             'collab', 'team', 'timeline', 'docs', 'updates', 'comments',

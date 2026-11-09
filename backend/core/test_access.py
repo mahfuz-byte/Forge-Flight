@@ -34,7 +34,7 @@ def api_routes():
         # Skip DRF format-suffix duplicates ("/api/posts.json") and the suffix-only root route.
         if not path.startswith('/api/') or not path.endswith('/') or 'format>' in path:
             continue
-        path = re.sub(r'<[^>]+>', 'x', path)
+        path = re.sub(r'<[^>]+>', '1', path)
         routes[path] = view
     return routes
 
@@ -50,7 +50,7 @@ class AccessSweepTests(APITestCase):
     def test_routes_were_found(self):
         routes = api_routes()
         self.assertIn('/api/posts/', routes)
-        self.assertIn('/api/posts/x/', routes)
+        self.assertIn('/api/posts/1/', routes)
 
     def test_anonymous_cannot_write_anywhere(self):
         for path in api_routes():
@@ -64,7 +64,7 @@ class AccessSweepTests(APITestCase):
 
     def test_private_lists_need_sign_in(self):
         for path in api_routes():
-            if path.endswith('/x/') or '/x/' in path or path in PUBLIC_READS:
+            if '/1/' in path or path in PUBLIC_READS:
                 continue
             if path in ANONYMOUS_WRITES:
                 continue

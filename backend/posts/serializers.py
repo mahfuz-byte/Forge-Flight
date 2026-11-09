@@ -6,13 +6,14 @@ from .models import Post
 class PostSerializer(serializers.ModelSerializer):
     startup_name = serializers.ReadOnlyField(source='startup.name')
     author_name = serializers.ReadOnlyField(source='author.name')
+    author_avatar = serializers.ImageField(source='author.avatar', read_only=True)
     likes_count = serializers.IntegerField(source='likes.count', read_only=True)
     is_liked = serializers.SerializerMethodField()
 
     class Meta:
         model = Post
         fields = [
-            'id', 'kind', 'startup', 'startup_name', 'author', 'author_name',
+            'id', 'kind', 'startup', 'startup_name', 'author', 'author_name', 'author_avatar',
             'post_type', 'title', 'text', 'tags', 'media', 'created_at',
             'likes_count', 'is_liked', 'pinned'
         ]

@@ -6,6 +6,7 @@ import LogoBadge from '../components/LogoBadge';
 import { Icon } from '../components/IconSprite';
 import { useApp } from '../context/AppContext';
 import { initialsOf } from '../data/startups';
+import Avatar from '../components/Avatar';
 import '../styles/messages.css';
 
 export default function Messages() {
@@ -48,18 +49,29 @@ export default function Messages() {
   const activeStartup = active ? startups[active.startupSlug] : null;
   const activeIsOwner = activeStartup?.ownerId === currentUser.id;
 
+  // New messages arriving in the open thread (via background sync) are read on sight (FE-08).
+  const activeConversationId = active?.id;
+  const activeUnread = active?.unread || 0;
+  useEffect(() => {
+    if (activeConversationId && activeUnread > 0) markConversationRead(activeConversationId).catch(() => {});
+  }, [activeConversationId, activeUnread]); // eslint-disable-line react-hooks/exhaustive-deps
+
   function selectConversation(id) {
     setActiveId(id);
     setMobileThreadOpen(true);
-    markConversationRead(id);
+    markConversationRead(id).catch(() => {});
   }
 
   async function sendMessage(e) {
     e.preventDefault();
     const text = draft.trim();
     if (!text || !active) return;
-    await sendConversationMessage(active.id, text);
-    setDraft('');
+    try {
+      await sendConversationMessage(active.id, text);
+      setDraft(''); // keep the draft if sending failed
+    } catch (err) {
+      window.alert(err.message || 'Message not sent. Please try again.');
+    }
   }
 
   return (
@@ -103,7 +115,9 @@ export default function Messages() {
                     className={`conv-row${conversation.id === activeId ? ' active' : ''}`}
                     onClick={() => selectConversation(conversation.id)}
                   >
-                    <LogoBadge id={isOwner ? conversation.initiatorId : conversation.startupSlug} initials={isOwner ? initialsOf(conversation.initiatorName) : (s?.initials || '?')} size={40} />
+                    {isOwner
+                      ? <Avatar src={conversation.initiatorAvatar} name={conversation.initiatorName} initials={initialsOf(conversation.initiatorName)} size={40} />
+                      : <LogoBadge id={conversation.startupSlug} initials={s?.initials || '?'} size={40} />}
                     <div className="conv-row-body">
                       <div className="conv-row-top">
                         <span className="conv-name">{isOwner ? conversation.initiatorName : (s?.name || conversation.startupName)}</span>
@@ -133,7 +147,9 @@ export default function Messages() {
                 <>
                   <div className="thread-head">
                     <button className="thread-back" onClick={() => setMobileThreadOpen(false)} aria-label="Back to conversations"><Icon name="back" /></button>
-                    <LogoBadge id={activeIsOwner ? active.initiatorId : active.startupSlug} initials={activeIsOwner ? initialsOf(active.initiatorName) : (activeStartup?.initials || '?')} size={38} />
+                    {activeIsOwner
+                      ? <Avatar src={active.initiatorAvatar} name={active.initiatorName} initials={initialsOf(active.initiatorName)} size={38} />
+                      : <LogoBadge id={active.startupSlug} initials={activeStartup?.initials || '?'} size={38} />}
                     <div>
                       <b>{activeIsOwner ? active.initiatorName : (activeStartup?.founder || active.startupName)}</b>
                       <span>{activeIsOwner ? `Inquiry for ${activeStartup?.name}` : (activeStartup?.name || active.startupName)}</span>

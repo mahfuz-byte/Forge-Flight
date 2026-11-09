@@ -1,6 +1,10 @@
 from django.db.models import Q
 from rest_framework import permissions, viewsets
+from rest_framework.decorators import action
+from rest_framework.response import Response
 from rest_framework.exceptions import PermissionDenied
+
+from notifications.services import notify
 
 from .models import Conversation, Message
 from .serializers import ConversationSerializer, MessageSerializer
@@ -18,6 +22,22 @@ class ConversationViewSet(viewsets.ModelViewSet):
             Q(initiator=user) | Q(startup__owner=user),
         ).select_related('startup', 'initiator').prefetch_related('messages')
 
+    @action(detail=True, methods=['post'])
+    def read(self, request, pk=None):
+        """Mark every message from the other person as read in one call (FE-08)."""
+        conversation = self.get_object()
+        updated = conversation.messages.filter(read=False).exclude(sender=request.user).update(read=True)
+        return Response({'marked_read': updated})
+
+    @action(detail=False, methods=['get'])
+    def unread(self, request):
+        """Unread message counts for the badge, without loading threads."""
+        qs = Message.objects.filter(
+            Q(conversation__initiator=request.user) | Q(conversation__startup__owner=request.user),
+            read=False,
+        ).exclude(sender=request.user)
+        return Response({'total': qs.count(), 'conversations': qs.values('conversation').distinct().count()})
+
 
 class MessageViewSet(viewsets.ModelViewSet):
     serializer_class = MessageSerializer
@@ -31,6 +51,15 @@ class MessageViewSet(viewsets.ModelViewSet):
         ).select_related('sender', 'conversation')
         conversation_id = self.request.query_params.get('conversation')
         return qs.filter(conversation_id=conversation_id) if conversation_id else qs
+
+    def perform_create(self, serializer):
+        message = serializer.save()
+        convo = message.conversation
+        recipient = convo.startup.owner if message.sender_id == convo.initiator_id else convo.initiator
+        notify(
+            recipient, f'New message from {message.sender.name}: "{message.text[:80]}"',
+            '/messages', icon='msg', color='info', actor=message.sender,
+        )
 
     def perform_update(self, serializer):
         # The sender may edit the text; the recipient may only mark it read.

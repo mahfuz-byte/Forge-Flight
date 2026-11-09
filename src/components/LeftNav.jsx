@@ -14,7 +14,8 @@ const ITEMS = [
 export default function LeftNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { openCreatePost, signedIn, logOut } = useApp();
+  const { openCreatePost, signedIn, logOut, unreadMessageCount, unreadNotificationCount } = useApp();
+  const badges = { '/messages': unreadMessageCount, '/notifications': unreadNotificationCount };
   const [createStartupOpen, setCreateStartupOpen] = useState(false);
 
   function isActive(href) {
@@ -33,6 +34,9 @@ export default function LeftNav() {
             onClick={() => navigate(href)}
           >
             <Icon name={icon} /><span>{label}</span>
+            {signedIn && badges[href] > 0 && (
+              <span className="nav-badge" aria-label={`${badges[href]} unread`}>{badges[href] > 99 ? '99+' : badges[href]}</span>
+            )}
           </button>
         ))}
         <button className={`nav-item${isActive('/account') ? ' active' : ''}`} onClick={() => navigate('/account')}>

@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Icon } from './IconSprite';
 import { useApp } from '../context/AppContext';
+import { fmtMoney } from '../data/startups';
 
 const MIN_AMOUNT = 100;
 
 export default function InvestButton({ startupId, suggested = 5000, wide }) {
-  const { addInvestment, startups, currentUser, signedIn } = useApp();
+  const { addInvestment, startups, currentUser, signedIn, investments } = useApp();
   const [open, setOpen] = useState(false);
   const [amount, setAmount] = useState(suggested);
   const [sent, setSent] = useState(false);
@@ -24,6 +25,17 @@ export default function InvestButton({ startupId, suggested = 5000, wide }) {
     );
   }
 
+  // Show the investor's real request state instead of a fresh button (FE-01).
+  const pending = investments.find(
+    (i) => i.startupId === startupId && i.investorId === currentUser.id && i.status === 'pending',
+  );
+  if (pending) {
+    return (
+      <div className="invest-sent">
+        <Icon name="check" />{sent ? 'Investment request sent' : 'Request pending'} · {fmtMoney(pending.amount)}
+      </div>
+    );
+  }
   if (sent) {
     return <div className="invest-sent"><Icon name="check" />Investment request sent</div>;
   }

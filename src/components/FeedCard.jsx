@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Icon } from './IconSprite';
 import LogoBadge from './LogoBadge';
+import Avatar from './Avatar';
 import InvestButton from './InvestButton';
 import { fmtMoney, fundingPct, statusMeta, LOGO_GRADIENTS } from '../data/startups';
 import { POST_TYPES } from '../data/posts';
@@ -183,68 +184,119 @@ function FounderPanel({ post, onEdit, onDelete, onPin, myStartups }) {
 }
 
 
+const IMAGE_EXTS = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+const VIDEO_EXTS = ['mp4', 'webm', 'mov', 'm4v'];
+
+export function PostMedia({ url, background }) {
+  if (!url) return null;
+  const ext = url.split('?')[0].split('.').pop().toLowerCase();
+  let inner;
+  if (IMAGE_EXTS.includes(ext)) {
+    inner = <img src={url} alt="Post attachment" loading="lazy" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+  } else if (VIDEO_EXTS.includes(ext)) {
+    inner = <video src={url} controls preload="metadata" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
+  } else {
+    inner = (
+      <a href={url} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, width: '100%', height: '100%', color: 'var(--bg)', textDecoration: 'none', fontWeight: 'bold' }}>
+        <Icon name="doc" />Open attachment
+      </a>
+    );
+  }
+  return <div className="card-media" style={{ background, overflow: 'hidden' }}>{inner}</div>;
+}
+
+// Runs a like/save/follow request: guests go to sign-in, double clicks are ignored,
+// and a failed request leaves the server's state on screen (FE-06).
+function useServerToggle() {
+  const navigate = useNavigate();
+  const { signedIn } = useApp();
+  const [busy, setBusy] = useState(null);
+  async function run(key, fn) {
+    if (!signedIn) { navigate('/login'); return; }
+    if (busy) return;
+    setBusy(key);
+    try {
+      await fn();
+    } catch (err) {
+      window.alert(err.message || 'That didn’t work. Please try again.');
+    } finally {
+      setBusy(null);
+    }
+  }
+  return [busy, run];
+}
+
 export default function FeedCard({ post }) {
   const [reported, setReported] = useState(false);
   const navigate = useNavigate();
   const { currentUser, startups, saved, toggleSaved, followed, toggleFollow, toggleLikePost, deletePost, pinPost, editPost, myStartups } = useApp();
+  const [busy, run] = useServerToggle();
 
   const id = post.startupId;
-  const s = startups[id];
-  const isOwner = s.ownerId === currentUser.id;
-  const isSaved = saved.has(id);
-  const isFollowing = followed.has(id);
-  const showFunding = s.goal > 0 && (s.status === 'open' || s.status === 'soon' || s.status === 'closed');
+  const s = id ? startups[id] : null;
+  const isOwner = s ? s.ownerId === currentUser.id : post.authorId === currentUser.id;
+  const isSaved = s ? saved.has(id) : false;
+  const isFollowing = s ? followed.has(id) : false;
+  const showFunding = !!s && s.goal > 0 && (s.status === 'open' || s.status === 'soon' || s.status === 'closed');
 
   let extra = null;
-  if (isOwner) extra = <FounderPanel post={post} onEdit={editPost} onDelete={deletePost} onPin={pinPost} myStartups={myStartups} />;
-  else if (s.goal > 0 && (s.status === 'open' || s.status === 'soon')) extra = <InvestorPanel id={id} s={s} />;
+  if (isOwner && s) extra = <FounderPanel post={post} onEdit={editPost} onDelete={deletePost} onPin={pinPost} myStartups={myStartups} />;
+  else if (s && s.goal > 0 && (s.status === 'open' || s.status === 'soon')) extra = <InvestorPanel id={id} s={s} />;
 
   return (
-    <article className="feed-card" data-startup={id}>
+    <article className="feed-card" data-startup={id || undefined}>
       <div className="card-head">
-        <LogoBadge id={id} initials={s.initials} />
+        {s ? (
+          <LogoBadge id={id} initials={s.initials} />
+        ) : (
+          <Avatar src={post.authorAvatar} name={post.authorName} size={42} />
+        )}
         <div className="who">
-          <div className="name-row" onClick={() => navigate(`/profile/${id}`)} style={{ cursor: 'pointer' }}>
-            <span style={{ fontWeight: 700 }}>{s.name}</span>
-            {s.verified && <Icon name="check" />}
-            {isOwner && <span className="your-startup-tag">Your startup</span>}
-          </div>
-          <div className="meta"><b>{s.founder}</b> · {post.timestamp}</div>
+          {s ? (
+            <div className="name-row" onClick={() => navigate(`/profile/${id}`)} style={{ cursor: 'pointer' }}>
+              <span style={{ fontWeight: 700 }}>{s.name}</span>
+              {s.verified && <Icon name="check" />}
+              {isOwner && <span className="your-startup-tag">Your startup</span>}
+            </div>
+          ) : (
+            <div className="name-row"><span style={{ fontWeight: 700 }}>{post.authorName || 'Member'}</span></div>
+          )}
+          <div className="meta"><b>{s ? s.founder : 'Personal update'}</b> · {post.timestamp}</div>
         </div>
       </div>
       <span className="post-type-tag" style={{ color: post.tagColor || 'var(--accent)' }}>{post.postType}</span>
       <div className="card-title">{post.postTitle}</div>
       <p className="card-text">{post.postText}</p>
-      {post.media && (
-        <div className="card-media" style={{ background: LOGO_GRADIENTS[id], overflow: 'hidden' }}>
-          {(() => {
-            const ext = post.media.split('.').pop().toLowerCase();
-            if (['jpg', 'jpeg', 'png', 'gif', 'webp'].includes(ext)) {
-              return <img src={post.media} alt="Post attachment" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
-            }
-            if (['mp4', 'webm', 'ogg'].includes(ext)) {
-              return <video src={post.media} controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />;
-            }
-            return (
-              <a href={post.media} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', width: '100%', height: '100%', color: 'var(--bg)', textDecoration: 'none', fontWeight: 'bold' }}>
-                View Attachment
-              </a>
-            );
-          })()}
-        </div>
-      )}
+      <PostMedia url={post.media} background={LOGO_GRADIENTS[id]} />
       <div className="tags-row">
         {post.tags.map((t) => <span className="tag-chip" key={t}>#{t}</span>)}
       </div>
       {showFunding && <FundingBlock s={s} />}
       {extra}
       <div className="action-row">
-        <button className={`action-btn${post.isLiked ? ' liked' : ''}`} onClick={() => toggleLikePost(post.id)}>
+        <button
+          className={`action-btn${post.isLiked ? ' liked' : ''}`}
+          disabled={busy === 'like'}
+          aria-pressed={post.isLiked}
+          onClick={() => run('like', () => toggleLikePost(post.id))}
+        >
           {post.isLiked ? '❤️' : '🤍'} {post.likesCount || 0}
         </button>
-        <button className="action-btn" onClick={() => navigate(`/profile/${id}#comments`)}><Icon name="comment" />Comment</button>
-        <button className={`action-btn${isSaved ? ' liked' : ''}`} onClick={() => toggleSaved(id)}><Icon name="bookmark" />{isSaved ? 'Saved' : 'Save'}</button>
-        <button className={`action-btn${isFollowing ? ' following' : ''}`} onClick={() => toggleFollow(id)}><Icon name="user" />{isFollowing ? 'Following' : 'Follow'}</button>
+        {s && (
+          <>
+            <button className="action-btn" onClick={() => navigate(`/profile/${id}#comments`)}><Icon name="comment" />Comment</button>
+            {!isOwner && (
+              <>
+                <button className={`action-btn${isSaved ? ' liked' : ''}`} disabled={busy === 'save'} aria-pressed={isSaved} onClick={() => run('save', () => toggleSaved(id))}>
+                  <Icon name="bookmark" />{isSaved ? 'Saved' : 'Save'}
+                </button>
+                <button className={`action-btn${isFollowing ? ' following' : ''}`} disabled={busy === 'follow'} aria-pressed={isFollowing} onClick={() => run('follow', () => toggleFollow(id))}>
+                  <Icon name="user" />{isFollowing ? 'Following' : 'Follow'}
+                </button>
+              </>
+            )}
+          </>
+        )}
         <button className={`action-btn${reported ? ' reported' : ''}`} disabled={reported} onClick={() => setReported(true)}><Icon name="flag" />{reported ? 'Reported' : 'Report'}</button>
       </div>
     </article>

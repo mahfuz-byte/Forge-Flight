@@ -6,6 +6,8 @@ import LogoBadge from '../components/LogoBadge';
 import InvestButton from '../components/InvestButton';
 import { LOGO_GRADIENTS, statusMeta, fmtMoney, fundingPct, initialsOf } from '../data/startups';
 import { useApp } from '../context/AppContext';
+import { api, mediaUrl } from '../api/client';
+import Avatar from '../components/Avatar';
 
 const TABS = [
   ['overview', 'Overview'],
@@ -138,34 +140,245 @@ function CollaborationPanel({ id, s, isOwner, navigate }) {
   );
 }
 
+// Documents with working links; the owner can upload and remove them (FE-09).
+function DocumentsPanel({ id, s, isOwner }) {
+  const { uploadDocument, removeDocument } = useApp();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  async function handleUpload(e) {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if (!file) return;
+    setBusy(true);
+    setError('');
+    try {
+      await uploadDocument(id, file);
+    } catch (err) {
+      setError(err.message || 'Upload failed. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function handleRemove(doc) {
+    if (!window.confirm(`Remove "${doc.name}"? This deletes the file.`)) return;
+    try {
+      await removeDocument(id, doc.id);
+    } catch (err) {
+      setError(err.message || 'Could not remove the document.');
+    }
+  }
+
+  return (
+    <div>
+      {s.docs.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>No documents uploaded yet.</p>}
+      {s.docs.map((doc) => (
+        <div className="doc-row" key={doc.id}>
+          <Icon name="doc" />
+          {doc.url ? (
+            <a href={doc.url} target="_blank" rel="noreferrer" className="doc-link">{doc.name}</a>
+          ) : (
+            <span title="This document has no file attached">{doc.name}</span>
+          )}
+          <span className="d-meta">{doc.size}</span>
+          {isOwner && (
+            <button type="button" className="icon-btn" aria-label={`Remove ${doc.name}`} onClick={() => handleRemove(doc)}>
+              <Icon name="trash" />
+            </button>
+          )}
+        </div>
+      ))}
+      {isOwner && (
+        <div style={{ marginTop: 16 }}>
+          <label className="btn btn-outline btn-sm" style={{ cursor: busy ? 'wait' : 'pointer' }}>
+            <Icon name="doc" />{busy ? 'Uploading…' : 'Upload document'}
+            <input
+              type="file"
+              hidden
+              disabled={busy}
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp"
+              onChange={handleUpload}
+            />
+          </label>
+          <p className="settings-hint" style={{ marginTop: 8 }}>PDF, Office documents or images, up to 20 MB.</p>
+        </div>
+      )}
+      {error && <p className="modal-error" role="alert">{error}</p>}
+    </div>
+  );
+}
+
+// Images and videos this startup has posted (FE-09).
+function GalleryPanel({ id }) {
+  const [items, setItems] = useState(null);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    let cancelled = false;
+    setItems(null);
+    api.get('/posts/', { startup: id, has_media: 1, page_size: 30 })
+      .then((data) => {
+        if (cancelled) return;
+        const media = (data.results || [])
+          .map((p) => ({ id: p.id, title: p.title, url: mediaUrl(p.media) }))
+          .filter((p) => /\.(jpe?g|png|gif|webp|mp4|webm|mov|m4v)$/i.test(p.url.split('?')[0]));
+        setItems(media);
+      })
+      .catch((err) => { if (!cancelled) setError(err.message); });
+    return () => { cancelled = true; };
+  }, [id]);
+
+  if (error) return <p className="modal-error">{error}</p>;
+  if (items === null) return <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>Loading gallery…</p>;
+  if (items.length === 0) {
+    return <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>No photos or videos yet. Images and videos attached to posts appear here.</p>;
+  }
+  return (
+    <div className="gallery-grid">
+      {items.map((item) => (
+        /\.(mp4|webm|mov|m4v)$/i.test(item.url.split('?')[0]) ? (
+          <video key={item.id} className="gallery-tile gallery-media" src={item.url} controls preload="metadata" title={item.title} />
+        ) : (
+          <a key={item.id} className="gallery-tile gallery-media" href={item.url} target="_blank" rel="noreferrer" title={item.title}>
+            <img src={item.url} alt={item.title} loading="lazy" />
+          </a>
+        )
+      ))}
+    </div>
+  );
+}
+
+// Comments with edit/delete for their author; moderators can delete (FE-07 / FE-11).
+function CommentsPanel({ id }) {
+  const { comments, addComment, editComment, deleteComment, currentUser, signedIn } = useApp();
+  const navigate = useNavigate();
+  const [draft, setDraft] = useState('');
+  const [editingId, setEditingId] = useState(null);
+  const [editText, setEditText] = useState('');
+  const [error, setError] = useState('');
+  const list = comments[id] || [];
+  const canModerate = ['moderator', 'admin', 'super_admin'].includes(currentUser.role);
+
+  async function attempt(fn) {
+    setError('');
+    try {
+      await fn();
+      return true;
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
+      return false;
+    }
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+    if (!signedIn) { navigate('/login'); return; }
+    if (!draft.trim()) return;
+    if (await attempt(() => addComment(id, draft.trim()))) setDraft('');
+  }
+
+  async function saveEdit(e) {
+    e.preventDefault();
+    if (!editText.trim()) return;
+    if (await attempt(() => editComment(id, editingId, editText.trim()))) setEditingId(null);
+  }
+
+  async function remove(c) {
+    if (!window.confirm('Delete this comment?')) return;
+    await attempt(() => deleteComment(id, c.id));
+  }
+
+  return (
+    <div id="comments">
+      {list.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>No comments yet. Start the conversation.</p>}
+      {list.map((c) => {
+        const mine = c.authorId === currentUser.id;
+        return (
+          <div className="comment-item" key={c.id}>
+            <Avatar src={c.avatar} name={c.name} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div className="c-name">{c.name} <time>· {c.time}</time></div>
+              {editingId === c.id ? (
+                <form onSubmit={saveEdit} className="field" style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+                  <input type="text" value={editText} onChange={(e) => setEditText(e.target.value)} style={{ flex: 1, minWidth: 0 }} autoFocus />
+                  <button className="btn btn-accent btn-sm" type="submit">Save</button>
+                  <button className="btn btn-outline btn-sm" type="button" onClick={() => setEditingId(null)}>Cancel</button>
+                </form>
+              ) : (
+                <div className="c-text">{c.text}</div>
+              )}
+            </div>
+            {(mine || canModerate) && editingId !== c.id && (
+              <div className="comment-actions">
+                {mine && (
+                  <button type="button" className="icon-btn" aria-label="Edit comment" onClick={() => { setEditingId(c.id); setEditText(c.text); }}>
+                    <Icon name="edit" />
+                  </button>
+                )}
+                <button type="button" className="icon-btn" aria-label="Delete comment" onClick={() => remove(c)}>
+                  <Icon name="trash" />
+                </button>
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {error && <p className="modal-error" role="alert">{error}</p>}
+      <form onSubmit={submit} className="field" style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
+        <input type="text" placeholder={signedIn ? 'Add a comment...' : 'Sign in to comment'} value={draft} onChange={(e) => setDraft(e.target.value)} style={{ flex: 1, minWidth: 0 }} />
+        <button className="btn btn-accent btn-sm" type="submit">Post</button>
+      </form>
+    </div>
+  );
+}
+
 export default function Profile() {
   const { id = 'healthsync' } = useParams();
   const [tab, setTab] = useState('overview');
-  const [commentDraft, setCommentDraft] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, startups, saved, toggleSaved, followed, toggleFollow, comments, addComment, startConversation } = useApp();
-  const s = startups[id] || startups.healthsync;
-  const isOwner = s.ownerId === currentUser.id;
+  const { currentUser, startups, saved, toggleSaved, followed, toggleFollow, startConversation, signedIn } = useApp();
+  const s = startups[id];
+  const isOwner = !!s && s.ownerId === currentUser.id;
   const isSaved = saved.has(id);
   const isFollowing = followed.has(id);
-  const pct = fundingPct(s.raised, s.goal);
-  const commentList = comments[id] || [];
 
   useEffect(() => {
     if (location.hash === '#comments') setTab('comments');
   }, [location.hash, id]);
 
-  async function submitComment(e) {
-    e.preventDefault();
-    if (!commentDraft.trim()) return;
-    await addComment(id, commentDraft.trim());
-    setCommentDraft('');
+  // Deleted or mistyped startup: say so instead of showing a different one.
+  if (!s) {
+    return (
+      <div>
+        <Topbar />
+        <div className="settings-card" style={{ maxWidth: 480, margin: '48px auto' }}>
+          <h4>Startup not found</h4>
+          <p className="settings-hint">It may have been renamed or removed.</p>
+          <button className="btn btn-accent btn-sm" onClick={() => navigate('/explore')}>Explore startups</button>
+        </div>
+      </div>
+    );
   }
 
-  async function handleMessage() {
-    const convId = await startConversation(id);
-    navigate(`/messages?id=${convId}`);
+  const pct = fundingPct(s.raised, s.goal);
+
+  // Save/follow/message: guests sign in first; failures are shown, not swallowed (FE-06).
+  async function guarded(fn) {
+    if (!signedIn) { navigate('/login'); return; }
+    try {
+      await fn();
+    } catch (err) {
+      window.alert(err.message || 'That didn’t work. Please try again.');
+    }
+  }
+
+  function handleMessage() {
+    return guarded(async () => {
+      const convId = await startConversation(id);
+      navigate(`/messages?id=${convId}`);
+    });
   }
 
   return (
@@ -188,13 +401,13 @@ export default function Profile() {
                 <button
                   className="btn btn-outline btn-sm"
                   style={isSaved ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}
-                  onClick={() => toggleSaved(id)}
+                  onClick={() => guarded(() => toggleSaved(id))}
                 >
                   <Icon name="bookmark" />{isSaved ? 'Saved' : 'Save'}
                 </button>
                 <button
                   className={isFollowing ? 'btn btn-outline btn-sm' : 'btn btn-accent btn-sm'}
-                  onClick={() => toggleFollow(id)}
+                  onClick={() => guarded(() => toggleFollow(id))}
                 >
                   {isFollowing ? 'Following' : 'Follow'}
                 </button>
@@ -257,22 +470,9 @@ export default function Profile() {
 
           {tab === 'funding' && <FundingPanel id={id} s={s} isOwner={isOwner} navigate={navigate} />}
 
-          {tab === 'documents' && (
-            <div>
-              {s.docs.length === 0 && <p style={{ fontSize: 13, color: 'var(--text-faint)' }}>No documents uploaded yet.</p>}
-              {s.docs.map(([name, size]) => (
-                <div className="doc-row" key={name}><Icon name="doc" /><span>{name}</span><span className="d-meta">{size}</span></div>
-              ))}
-            </div>
-          )}
+          {tab === 'documents' && <DocumentsPanel id={id} s={s} isOwner={isOwner} />}
 
-          {tab === 'gallery' && (
-            <div className="gallery-grid">
-              {[1, 2, 3, 4, 5, 6].map((i) => (
-                <div className="gallery-tile" key={i} style={{ background: LOGO_GRADIENTS[id] || 'linear-gradient(155deg,#403d39,#252422)' }}><Icon name="img" style={{ width: 22, height: 22 }} /></div>
-              ))}
-            </div>
-          )}
+          {tab === 'gallery' && <GalleryPanel id={id} />}
 
           {tab === 'collaboration' && <CollaborationPanel id={id} s={s} isOwner={isOwner} navigate={navigate} />}
 
@@ -284,20 +484,7 @@ export default function Profile() {
             </div>
           )}
 
-          {tab === 'comments' && (
-            <div id="comments">
-              {commentList.map((c, i) => (
-                <div className="comment-item" key={c.name + c.time + i}>
-                  <div className="avatar">{initialsOf(c.name)}</div>
-                  <div><div className="c-name">{c.name} <time>· {c.time}</time></div><div className="c-text">{c.text}</div></div>
-                </div>
-              ))}
-              <form onSubmit={submitComment} className="field" style={{ marginTop: 16, display: 'flex', gap: 10, alignItems: 'center' }}>
-                <input type="text" placeholder="Add a comment..." value={commentDraft} onChange={(e) => setCommentDraft(e.target.value)} style={{ flex: 1 }} />
-                <button className="btn btn-accent btn-sm" type="submit">Post</button>
-              </form>
-            </div>
-          )}
+          {tab === 'comments' && <CommentsPanel id={id} />}
         </div>
 
         <aside>
@@ -333,12 +520,12 @@ export default function Profile() {
                 style={{ padding: 0, border: 'none', background: 'none', width: '100%', textAlign: 'left', cursor: 'pointer' }}
                 onClick={() => navigate('/account')}
               >
-                <div className="avatar">{initialsOf(s.founder)}</div>
+                <Avatar src={s.founderAvatar} name={s.founder} />
                 <div><div className="t-name">{s.founder}</div><div className="t-meta">View your account</div></div>
               </button>
             ) : (
               <div className="trend-row" style={{ padding: 0 }}>
-                <div className="avatar">{initialsOf(s.founder)}</div>
+                <Avatar src={s.founderAvatar} name={s.founder} />
                 <div><div className="t-name">{s.founder}</div><div className="t-meta">Founder &amp; CEO</div></div>
               </div>
             )}

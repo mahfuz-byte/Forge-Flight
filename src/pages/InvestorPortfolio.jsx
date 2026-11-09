@@ -5,6 +5,7 @@ import LeftNav from '../components/LeftNav';
 import LogoBadge from '../components/LogoBadge';
 import { statusMeta, fmtMoney, fundingPct } from '../data/startups';
 import { useApp } from '../context/AppContext';
+import RequestStatus from '../components/RequestStatus';
 import '../styles/settings.css';
 import '../styles/dashboard.css';
 
@@ -99,7 +100,7 @@ function RequestsTab({ investments, startups, cancelInvestment, navigate }) {
                     <button className="btn btn-outline btn-sm" onClick={() => cancelInvestment(inv.id).catch((err) => alert(err.message))}>Withdraw</button>
                   </div>
                 ) : (
-                  <span className={`status-pill ${inv.status === 'accepted' ? 'status-open' : 'status-closed'}`}>{inv.status}</span>
+                  <RequestStatus status={inv.status} />
                 )}
               </div>
             );
@@ -110,15 +111,15 @@ function RequestsTab({ investments, startups, cancelInvestment, navigate }) {
   );
 }
 
-function HistoryTab({ startups, navigate }) {
-  const { investments } = useApp();
-  const history = investments.filter((investment) => investment.status !== 'pending');
+function HistoryTab({ investments, startups, navigate }) {
+  // Only this investor's own decided requests, for startups that still exist.
+  const history = investments.filter((investment) => investment.status !== 'pending' && startups[investment.startupId]);
   return (
     <div className="settings-card">
       <h4>Investment History</h4>
-      <p className="settings-hint">Accepted or declined requests from the backend.</p>
+      <p className="settings-hint">Requests that were accepted, rejected or withdrawn.</p>
       {history.length === 0 ? (
-        <p className="settings-hint">No completed requests yet.</p>
+        <p className="settings-hint">No decided requests yet.</p>
       ) : (
         history.map((inv) => {
           const s = startups[inv.startupId];
@@ -127,11 +128,11 @@ function HistoryTab({ startups, navigate }) {
               <LogoBadge id={inv.startupId} initials={s.initials} size={44} />
               <div className="pc-body">
                 <b>{s.name}</b>
-                <span>{inv.time} · {inv.status}</span>
+                <span>{inv.time}{inv.note ? ` · “${inv.note}”` : ''}</span>
               </div>
               <div className="pc-amount">
                 <b>{fmtMoney(inv.amount)}</b>
-                <span>{inv.status}</span>
+                <RequestStatus status={inv.status} />
               </div>
             </div>
           );
@@ -170,7 +171,7 @@ export default function InvestorPortfolio() {
               {section === 'watchlist' && <WatchlistTab saved={saved} startups={startups} navigate={navigate} />}
               {section === 'portfolio' && <PortfolioTab investments={myInvestments} startups={startups} navigate={navigate} />}
               {section === 'requests' && <RequestsTab investments={myInvestments} startups={startups} cancelInvestment={cancelInvestment} navigate={navigate} />}
-              {section === 'history' && <HistoryTab startups={startups} navigate={navigate} />}
+              {section === 'history' && <HistoryTab investments={myInvestments} startups={startups} navigate={navigate} />}
             </div>
           </div>
         </main>

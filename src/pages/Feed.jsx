@@ -2,45 +2,36 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import Topbar from '../components/Topbar';
 import LeftNav from '../components/LeftNav';
 import FeedCard, { EventCard } from '../components/FeedCard';
-import { nextPostBatch, MORE_POOL_SIZE } from '../data/posts';
+import Avatar from '../components/Avatar';
 import { useApp } from '../context/AppContext';
 
 const FILTERS = ['All', 'Trending', 'Funding Open', 'Collaboration', 'Newest'];
 const TRENDING_IDS = new Set(['healthsync', 'medai', 'nimbus', 'farmchain']);
-const MAX_LOAD_ROUNDS = 3;
 
 export default function Feed() {
   const [filter, setFilter] = useState('All');
-  const [loading, setLoading] = useState(false);
-  const [loadRounds, setLoadRounds] = useState(0);
-  const { posts, startups, loadMorePosts, openCreatePost, currentUser } = useApp();
+  const { posts, startups, loadMorePosts, hasMorePosts, postsLoading, openCreatePost, currentUser } = useApp();
   const sentinelRef = useRef(null);
 
   const filtered = useMemo(() => posts.filter((post) => {
     if (post.type === 'event') return filter === 'All' || filter === 'Newest';
     const s = startups[post.startupId];
     if (filter === 'Trending') return TRENDING_IDS.has(post.startupId);
-    if (filter === 'Funding Open') return s.status === 'open';
+    if (filter === 'Funding Open') return s?.status === 'open';
     if (filter === 'Collaboration') return post.postType === 'Collaboration Post';
     return true;
   }), [posts, filter, startups]);
 
+  // Fetch the next page from the server when the end of the feed scrolls into view (FE-05).
   useEffect(() => {
     const el = sentinelRef.current;
-    if (!el) return undefined;
+    if (!el || !hasMorePosts) return undefined;
     const observer = new IntersectionObserver((entries) => {
-      if (entries[0].isIntersecting && !loading && loadRounds < MAX_LOAD_ROUNDS) {
-        setLoading(true);
-        setTimeout(() => {
-          loadMorePosts(nextPostBatch(Math.min(3, MORE_POOL_SIZE)));
-          setLoadRounds((r) => r + 1);
-          setLoading(false);
-        }, 700);
-      }
+      if (entries[0].isIntersecting) loadMorePosts();
     }, { rootMargin: '200px' });
     observer.observe(el);
     return () => observer.disconnect();
-  }, [loading, loadRounds, loadMorePosts]);
+  }, [hasMorePosts, loadMorePosts]);
 
   return (
     <div>
@@ -54,11 +45,11 @@ export default function Feed() {
             ))}
           </div>
           <div className="composer-strip">
-            <button className="avatar" onClick={openCreatePost}>{currentUser.initials}</button>
+            <Avatar src={currentUser.avatar} name={currentUser.name} initials={currentUser.initials} onClick={openCreatePost} className="avatar" />
             <input type="text" placeholder="Share a progress update..." readOnly style={{ cursor: 'pointer' }} onClick={openCreatePost} />
           </div>
           <div>
-            {filtered.length === 0 ? (
+            {filtered.length === 0 && !postsLoading ? (
               <div className="feed-end"><span className="feed-caught-up">No posts match this filter yet.</span></div>
             ) : filtered.map((post) => (
               post.type === 'event'
@@ -67,8 +58,11 @@ export default function Feed() {
             ))}
           </div>
           <div ref={sentinelRef} className="feed-end">
-            {loading && <span className="feed-loading"><span className="spinner" />Loading more...</span>}
-            {!loading && loadRounds >= MAX_LOAD_ROUNDS && <span className="feed-caught-up">You&rsquo;re all caught up.</span>}
+            {postsLoading && <span className="feed-loading"><span className="spinner" />Loading more...</span>}
+            {!postsLoading && hasMorePosts && (
+              <button className="btn btn-outline btn-sm" onClick={loadMorePosts}>Load more</button>
+            )}
+            {!postsLoading && !hasMorePosts && posts.length > 0 && <span className="feed-caught-up">You&rsquo;re all caught up.</span>}
           </div>
         </main>
       </div>

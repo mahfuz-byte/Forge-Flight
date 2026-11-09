@@ -11,7 +11,7 @@ from django.utils import timezone
 
 from accounts.models import Role
 from audit.log import record
-from notifications.models import Notification
+from notifications.services import notify
 
 from .models import Application, CollaborationRole, Investment, Startup
 
@@ -26,8 +26,8 @@ class BusinessRuleError(Exception):
         self.field = field
 
 
-def _notify(user, text, link, icon='bell', color='var(--info)'):
-    Notification.objects.create(recipient=user, text=text[:255], link=link[:140], icon=icon, color=color)
+def _notify(user, text, link, icon='bell', color='info'):
+    notify(user, text, link, icon=icon, color=color)
 
 
 def _lock_startup(startup_id):
@@ -108,7 +108,7 @@ def create_investment(investor, startup, amount):
             raise BusinessRuleError('You already have a pending request for this startup.', conflict=True)
         _notify(
             startup.owner, f'New investment request of ${amount:,} for {startup.name}.',
-            f'/dashboard/{startup.pk}', icon='coin', color='var(--success)',
+            f'/dashboard/{startup.pk}', icon='coin', color='success',
         )
     record('investment.create', inv, amount=amount, startup=startup.pk)
     return inv
@@ -164,7 +164,7 @@ def decide_investment(inv, user, accept, note=''):
         verb = 'accepted' if accept else 'declined'
         _notify(
             inv.investor, f'{startup.name} {verb} your ${inv.amount:,} investment request.',
-            f'/profile/{startup.pk}', icon='coin', color='var(--success)' if accept else 'var(--warning)',
+            f'/profile/{startup.pk}', icon='coin', color='success' if accept else 'warning',
         )
     record(f'investment.{inv.status}', inv, amount=inv.amount, startup=startup.pk, note=inv.decision_note)
     return inv
@@ -223,7 +223,7 @@ def create_application(applicant, startup, **fields):
             raise BusinessRuleError('You have already applied to this startup.', conflict=True)
         _notify(
             startup.owner, f'{app.name or applicant.name} applied for {collab.role} at {startup.name}.',
-            f'/dashboard/{startup.pk}', icon='handshake', color='var(--warning)',
+            f'/dashboard/{startup.pk}', icon='handshake', color='warning',
         )
     return app
 
@@ -243,7 +243,7 @@ def decide_application(app, user, accept):
         _notify(
             app.applicant, f'{app.startup.name} {app.status} your application for {app.role}.',
             f'/profile/{app.startup_id}', icon='handshake',
-            color='var(--success)' if accept else 'var(--warning)',
+            color='success' if accept else 'warning',
         )
     record(f'application.{app.status}', app, startup=app.startup_id)
     return app

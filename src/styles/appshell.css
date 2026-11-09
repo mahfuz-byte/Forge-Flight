@@ -26,6 +26,9 @@
 .notif-item { display: flex; gap: 10px; padding: 9px 10px; border-radius: 6px; font-size: 13px; }
 .notif-item:hover { background: var(--surface); }
 .notif-item .n-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 6px; flex-shrink: 0; }
+.notif-item p { margin: 0; color: var(--text); }
+.notif-empty { font-size: 13px; color: var(--text-faint); padding: 8px 10px 12px; margin: 0; }
+.nav-badge { margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px; border-radius: 10px; background: var(--accent); color: var(--c-paper, #fff); font-size: 11px; font-weight: 700; display: inline-flex; align-items: center; justify-content: center; }
 .notif-item p { color: var(--text); line-height: 1.35; }
 .notif-item time { color: var(--text-faint); font-size: 11px; }
 .menu-item { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 6px; font-size: 13.5px; color: var(--text); background: none; border: none; width: 100%; text-align: left; }

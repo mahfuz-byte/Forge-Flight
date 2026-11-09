@@ -12,6 +12,7 @@ import Messages from './pages/Messages';
 import Notifications from './pages/Notifications';
 import FounderDashboard from './pages/FounderDashboard';
 import AccountProfile from './pages/AccountProfile';
+import Settings from './pages/Settings';
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/account" element={<AccountProfile />} />
           <Route path="/dashboard/:id" element={<FounderDashboard />} />
+          <Route path="/settings" element={<Settings />} />
           <Route path="*" element={<Landing />} />
         </Routes>
         <CreatePostModal />

@@ -29,11 +29,12 @@ class ConversationSerializer(serializers.ModelSerializer):
     startup_slug = serializers.ReadOnlyField(source='startup.slug')
     startup_name = serializers.ReadOnlyField(source='startup.name')
     initiator_name = serializers.ReadOnlyField(source='initiator.name')
+    initiator_avatar = serializers.ImageField(source='initiator.avatar', read_only=True)
     messages = MessageSerializer(many=True, read_only=True)
 
     class Meta:
         model = Conversation
-        fields = ['id', 'startup', 'startup_slug', 'startup_name', 'initiator', 'initiator_name', 'created_at', 'messages']
+        fields = ['id', 'startup', 'startup_slug', 'startup_name', 'initiator', 'initiator_name', 'initiator_avatar', 'created_at', 'messages']
         read_only_fields = ['initiator']
 
     def create(self, validated_data):

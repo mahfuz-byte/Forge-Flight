@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { api } from '../api/client';
+import { api, mediaUrl } from '../api/client';
 import { timeAgo } from '../utils/timeAgo';
 
 const AppContext = createContext(null);
@@ -30,9 +30,9 @@ function transformUser(u) {
     googleLinked: Boolean(u.google_linked),
     bio: u.bio || '',
     location: u.location || '',
-    avatar: u.avatar ? (u.avatar.startsWith('http') ? u.avatar : `http://127.0.0.1:8000${u.avatar}`) : null,
+    avatar: mediaUrl(u.avatar),
     headline: u.headline || '',
-    resume: u.resume ? (u.resume.startsWith('http') ? u.resume : `http://127.0.0.1:8000${u.resume}`) : null,
+    resume: mediaUrl(u.resume),
     skills: u.skills || '',
     experience_level: u.experience_level || '',
     portfolio_link: u.portfolio_link || '',
@@ -50,6 +50,7 @@ function transformStartup(s) {
     initials: s.initials,
     verified: s.verified,
     founder: s.founder,
+    founderAvatar: mediaUrl(s.founder_avatar),
     ownerId: s.owner,
     tagline: s.tagline,
     status: s.status,
@@ -60,7 +61,7 @@ function transformStartup(s) {
     overview: s.overview || '',
     team: (s.team || []).map((t) => [t.name, t.title]),
     timeline: (s.timeline || []).map((t) => [t.date_label, t.title, t.description]),
-    docs: (s.docs || []).map((d) => [d.name, d.size]),
+    docs: (s.docs || []).map((d) => ({ id: d.id, name: d.name, size: d.size, url: mediaUrl(d.file) })),
     collab: s.collab ? { role: s.collab.role, body: s.collab.body, isOpen: s.collab.is_open !== false } : null,
     updates: (s.updates || []).map((u) => u.text),
   };
@@ -83,6 +84,7 @@ function transformConversation(c, currentUserId) {
     startupName: c.startup_name || '',
     initiatorId: c.initiator,
     initiatorName: c.initiator_name || '',
+    initiatorAvatar: mediaUrl(c.initiator_avatar),
     thread,
     unread: thread.filter((m) => m.from === 'them' && !m.read).length,
     time: lastMessage ? timeAgo(lastMessage.created_at) : timeAgo(c.created_at),
@@ -102,8 +104,15 @@ function transformNotification(n) {
   };
 }
 
+function transformComment(c) {
+  return {
+    id: c.id, authorId: c.author, name: c.author_name, avatar: mediaUrl(c.author_avatar),
+    text: c.text, time: timeAgo(c.created_at),
+  };
+}
+
 function transformComments(s) {
-  return (s.comments || []).map((c) => ({ id: c.id, name: c.author_name, text: c.text, time: timeAgo(c.created_at) }));
+  return (s.comments || []).map(transformComment);
 }
 
 function transformPost(p) {
@@ -111,12 +120,14 @@ function transformPost(p) {
     id: p.id,
     startupId: p.startup || undefined,
     authorId: p.author || undefined,
+    authorName: p.author_name || '',
+    authorAvatar: mediaUrl(p.author_avatar),
     type: p.kind === 'event' ? 'event' : undefined,
     postType: p.post_type,
     postTitle: p.title,
     postText: p.text,
     tags: p.tags || [],
-    media: p.media || null,
+    media: mediaUrl(p.media),
     likesCount: p.likes_count || 0,
     isLiked: !!p.is_liked,
     pinned: !!p.pinned,
@@ -129,6 +140,7 @@ function transformApplication(a) {
     id: a.id, startupId: a.startup, type: 'collaboration',
     role: a.role, name: a.name, email: a.email, link: a.link, message: a.message,
     applicantId: a.applicant, time: timeAgo(a.created_at), status: a.status,
+    decidedAt: a.decided_at,
   };
 }
 
@@ -147,6 +159,10 @@ export function AppProvider({ children }) {
   const [theme, setTheme] = useState(getInitialTheme);
   const [startups, setStartups] = useState({});
   const [posts, setPosts] = useState([]);
+  // Feed pagination (FE-05): the last page loaded and whether the server has more.
+  const [postsPage, setPostsPage] = useState(0);
+  const [hasMorePosts, setHasMorePosts] = useState(true);
+  const [postsLoading, setPostsLoading] = useState(false);
   const [comments, setComments] = useState({});
   const [applications, setApplications] = useState([]);
   const [investments, setInvestments] = useState([]);
@@ -162,6 +178,37 @@ export function AppProvider({ children }) {
 
   function toggleTheme() {
     setTheme((cur) => (cur === 'dark' ? 'light' : 'dark'));
+  }
+
+  async function loadFeedPage(page) {
+    const data = await api.get('/posts/', { page });
+    return { items: (data.results || []).map(transformPost), more: Boolean(data.next) };
+  }
+
+  // Reload the first feed page, e.g. after sign-in so "liked" states are this user's (FE-06).
+  async function refreshFeed() {
+    const { items, more } = await loadFeedPage(1).catch(() => ({ items: [], more: false }));
+    setPosts(items);
+    setPostsPage(1);
+    setHasMorePosts(more);
+  }
+
+  async function loadMorePosts() {
+    if (postsLoading || !hasMorePosts) return;
+    setPostsLoading(true);
+    try {
+      const { items, more } = await loadFeedPage(postsPage + 1);
+      setPosts((cur) => {
+        const seen = new Set(cur.map((p) => p.id));
+        return [...cur, ...items.filter((p) => !seen.has(p.id))];
+      });
+      setPostsPage((n) => n + 1);
+      setHasMorePosts(more);
+    } catch {
+      setHasMorePosts(false);
+    } finally {
+      setPostsLoading(false);
+    }
   }
 
   async function loadInbox(userId) {
@@ -181,9 +228,9 @@ export function AppProvider({ children }) {
     let cancelled = false;
 
     async function init() {
-      const [startupList, postList, me] = await Promise.all([
+      const [startupList, firstPage, me] = await Promise.all([
         api.get('/startups/'),
-        api.get('/posts/'),
+        loadFeedPage(1).catch(() => ({ items: [], more: false })),
         api.get('/auth/me/').catch(() => null),
       ]);
       if (cancelled) return;
@@ -196,7 +243,9 @@ export function AppProvider({ children }) {
       });
       setStartups(nextStartups);
       setComments(nextComments);
-      setPosts(postList.map(transformPost));
+      setPosts(firstPage.items);
+      setPostsPage(1);
+      setHasMorePosts(firstPage.more);
 
       if (me) {
         setCurrentUser(transformUser(me));
@@ -228,7 +277,7 @@ export function AppProvider({ children }) {
     ]);
     setApplications(appList.map(transformApplication));
     setInvestments(investList.map(transformInvestment));
-    await loadInbox(user.id);
+    await Promise.all([loadInbox(user.id), refreshFeed()]);
     return user;
   }
 
@@ -257,6 +306,7 @@ export function AppProvider({ children }) {
     setInvestments([]);
     setConversations([]);
     setNotifications([]);
+    await refreshFeed();
     return user;
   }
 
@@ -268,6 +318,32 @@ export function AppProvider({ children }) {
     setInvestments([]);
     setConversations([]);
     setNotifications([]);
+    await refreshFeed();
+  }
+
+  // Keep messages and notifications in sync while signed in (FE-04 / FE-08):
+  // poll every 30s and whenever the tab regains focus.
+  useEffect(() => {
+    if (!signedIn || !currentUser.id) return undefined;
+    const userId = currentUser.id;
+    const sync = () => { if (!document.hidden) loadInbox(userId).catch(() => {}); };
+    const timer = window.setInterval(sync, 30000);
+    window.addEventListener('focus', sync);
+    return () => {
+      window.clearInterval(timer);
+      window.removeEventListener('focus', sync);
+    };
+  }, [signedIn, currentUser.id]);
+
+  async function changePassword(currentPassword, newPassword) {
+    await api.post('/auth/password/', { current_password: currentPassword, new_password: newPassword });
+    setCurrentUser((cur) => ({ ...cur, hasPassword: true }));
+  }
+
+  // Signed-in user connects their Google account (the backend links it to this account).
+  async function connectGoogle(credential) {
+    const user = await api.post('/auth/google/', { credential });
+    setCurrentUser(transformUser(user));
   }
 
   async function updateCurrentUser(patch) {
@@ -300,6 +376,7 @@ export function AppProvider({ children }) {
   }
 
   async function toggleSaved(id) {
+    if (!signedIn) throw new Error('Sign in to save startups.');
     const isSaved = currentUser.saved_startups.includes(id);
     await api.post(`/startups/${id}/${isSaved ? 'unsave' : 'save'}/`);
     setCurrentUser((cur) => ({
@@ -309,6 +386,7 @@ export function AppProvider({ children }) {
   }
 
   async function toggleFollow(id) {
+    if (!signedIn) throw new Error('Sign in to follow startups.');
     const isFollowing = currentUser.followed_startups.includes(id);
     await api.post(`/startups/${id}/${isFollowing ? 'unfollow' : 'follow'}/`);
     setCurrentUser((cur) => ({
@@ -347,6 +425,7 @@ export function AppProvider({ children }) {
   }
 
   async function toggleLikePost(postId) {
+    if (!signedIn) throw new Error('Sign in to like posts.');
     const data = await api.post(`/posts/${postId}/toggle_like/`);
     setPosts(cur => cur.map(p => p.id === postId ? { ...p, isLiked: data.is_liked, likesCount: data.likes_count } : p));
   }
@@ -381,16 +460,25 @@ export function AppProvider({ children }) {
     } : p));
   }
 
-  function loadMorePosts(batch) {
-    setPosts((cur) => [...cur, ...batch]);
-  }
-
   async function addComment(startupId, text) {
     const created = await api.post('/comments/', { startup: startupId, text });
     setComments((cur) => ({
       ...cur,
-      [startupId]: [...(cur[startupId] || []), { id: created.id, name: created.author_name, text: created.text, time: timeAgo(created.created_at) }],
+      [startupId]: [...(cur[startupId] || []), transformComment(created)],
     }));
+  }
+
+  async function editComment(startupId, commentId, text) {
+    const updated = await api.patch(`/comments/${commentId}/`, { text });
+    setComments((cur) => ({
+      ...cur,
+      [startupId]: (cur[startupId] || []).map((c) => (c.id === commentId ? transformComment(updated) : c)),
+    }));
+  }
+
+  async function deleteComment(startupId, commentId) {
+    await api.delete(`/comments/${commentId}/`);
+    setComments((cur) => ({ ...cur, [startupId]: (cur[startupId] || []).filter((c) => c.id !== commentId) }));
   }
 
   async function addApplication(app) {
@@ -443,6 +531,34 @@ export function AppProvider({ children }) {
     setStartups((cur) => ({ ...cur, [s.slug]: transformStartup(s) }));
   }
 
+  async function updateStartup(slug, { name, tagline, tags, overview }) {
+    const s = await api.patch(`/startups/${slug}/`, { name, tagline, tags, overview });
+    setStartups((cur) => ({ ...cur, [s.slug]: transformStartup(s) }));
+  }
+
+  async function deleteStartup(slug) {
+    await api.delete(`/startups/${slug}/`);
+    setStartups((cur) => {
+      const next = { ...cur };
+      delete next[slug];
+      return next;
+    });
+    setPosts((cur) => cur.filter((p) => p.startupId !== slug));
+  }
+
+  async function uploadDocument(slug, file, name) {
+    const body = new FormData();
+    body.append('file', file);
+    if (name) body.append('name', name);
+    await api.post(`/startups/${slug}/documents/`, body);
+    await refreshStartup(slug);
+  }
+
+  async function removeDocument(slug, docId) {
+    await api.delete(`/startups/${slug}/documents/${docId}/`);
+    setStartups((cur) => ({ ...cur, [slug]: { ...cur[slug], docs: cur[slug].docs.filter((d) => d.id !== docId) } }));
+  }
+
   async function saveCollaboration(slug, { role, body, isOpen }) {
     const collab = await api.put(`/startups/${slug}/collaboration/`, { role, body, is_open: isOpen });
     setStartups((cur) => ({
@@ -488,9 +604,8 @@ export function AppProvider({ children }) {
   async function markConversationRead(conversationId) {
     const conversation = conversations.find((c) => c.id === conversationId);
     if (!conversation) return;
-    const unreadMessages = conversation.thread.filter((m) => m.from === 'them' && !m.read);
-    if (unreadMessages.length === 0) return;
-    await Promise.all(unreadMessages.map((message) => api.patch(`/messages/${message.id}/`, { read: true })));
+    if (conversation.unread === 0) return;
+    await api.post(`/conversations/${conversationId}/read/`);
     setConversations((cur) => cur.map((c) => {
       if (c.id !== conversationId) return c;
       return {
@@ -509,9 +624,8 @@ export function AppProvider({ children }) {
   }
 
   async function markAllNotificationsRead() {
-    const unreadIds = notifications.filter((n) => !n.read).map((n) => n.id);
-    if (unreadIds.length === 0) return;
-    await Promise.all(unreadIds.map((id) => api.patch(`/notifications/${id}/`, { read: true })));
+    if (!notifications.some((n) => !n.read)) return;
+    await api.post('/notifications/read_all/');
     setNotifications((cur) => cur.map((notification) => ({ ...notification, read: true })));
   }
 
@@ -525,6 +639,15 @@ export function AppProvider({ children }) {
 
   const saved = useMemo(() => new Set(currentUser.saved_startups), [currentUser.saved_startups]);
   const followed = useMemo(() => new Set(currentUser.followed_startups), [currentUser.followed_startups]);
+
+  const unreadMessageCount = useMemo(
+    () => conversations.reduce((sum, c) => sum + c.unread, 0),
+    [conversations],
+  );
+  const unreadNotificationCount = useMemo(
+    () => notifications.filter((n) => !n.read).length,
+    [notifications],
+  );
 
   const myStartups = useMemo(
     () => Object.entries(startups).filter(([, s]) => s.ownerId === currentUser.id),
@@ -556,17 +679,20 @@ export function AppProvider({ children }) {
     <AppContext.Provider
       value={{
         currentUser, updateCurrentUser, registerUser, login, googleSignIn, logOut, signedIn, setSignedIn,
+        changePassword, connectGoogle,
         theme, setTheme, toggleTheme,
-        startups, createStartup, myStartups, collaboratingIds,
+        startups, createStartup, updateStartup, deleteStartup, uploadDocument, removeDocument,
+        myStartups, collaboratingIds,
         saved, toggleSaved,
         followed, toggleFollow,
-        posts, addPost, toggleLikePost, deletePost, pinPost, editPost, loadMorePosts,
-        comments, addComment,
+        posts, addPost, toggleLikePost, deletePost, pinPost, editPost,
+        loadMorePosts, hasMorePosts, postsLoading,
+        comments, addComment, editComment, deleteComment,
         applications, addApplication, setApplicationStatus, withdrawApplication,
         investments, addInvestment, cancelInvestment, setInvestmentStatus,
         updateFunding, saveCollaboration,
-        conversations, startConversation, sendMessage, markConversationRead,
-        notifications, markNotificationRead, markAllNotificationsRead,
+        conversations, startConversation, sendMessage, markConversationRead, unreadMessageCount,
+        notifications, markNotificationRead, markAllNotificationsRead, unreadNotificationCount,
         postModalOpen, openCreatePost, closeCreatePost,
       }}
     >

@@ -1,5 +1,12 @@
 const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
+// Uploaded files come back as "/media/..." or absolute URLs; make them absolute.
+const API_ORIGIN = new URL(BASE_URL, window.location.href).origin;
+export function mediaUrl(path) {
+  if (!path) return null;
+  return /^https?:\/\//.test(path) ? path : `${API_ORIGIN}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
 function getCookie(name) {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
