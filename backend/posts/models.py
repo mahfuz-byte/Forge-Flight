@@ -2,6 +2,8 @@ from django.conf import settings
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 
+from core.uploads import RandomFilename, validate_post_media
+
 
 class Post(models.Model):
     KIND_CHOICES = [
@@ -22,7 +24,9 @@ class Post(models.Model):
     title = models.CharField(max_length=255)
     text = models.TextField(blank=True)
     tags = ArrayField(models.CharField(max_length=40), blank=True, default=list)
-    media = models.FileField(upload_to='post_media/', blank=True, null=True)
+    media = models.FileField(
+        upload_to=RandomFilename('post_media'), blank=True, null=True, validators=[validate_post_media],
+    )
     likes = models.ManyToManyField(settings.AUTH_USER_MODEL, related_name='liked_posts', blank=True)
     pinned = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)

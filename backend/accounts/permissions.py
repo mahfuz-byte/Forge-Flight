@@ -8,7 +8,7 @@ from rest_framework import permissions
 from .models import Role
 
 
-def _resolve(obj, path):
+def resolve_path(obj, path):
     """Follow a dotted attribute path such as ``'startup.owner_id'``."""
     for part in path.split('.'):
         if obj is None:
@@ -65,10 +65,10 @@ def is_owner_or_staff(user, obj, view):
     if not (user and user.is_authenticated):
         return False
     owner_field = getattr(view, 'owner_field', 'owner_id')
-    if _resolve(obj, owner_field) == user.id:
+    if resolve_path(obj, owner_field) == user.id:
         return True
     staff_roles = getattr(view, 'staff_roles', ())
     return bool(staff_roles) and user.has_role(*staff_roles)
 
 
-__all__ = ['HasRole', 'IsOwner', 'IsOwnerOrReadOnly', 'IsPlatformAdmin', 'Role', 'is_owner_or_staff']
+__all__ = ['HasRole', 'resolve_path', 'IsOwner', 'IsOwnerOrReadOnly', 'IsPlatformAdmin', 'Role', 'is_owner_or_staff']

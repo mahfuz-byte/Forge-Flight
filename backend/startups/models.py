@@ -3,6 +3,8 @@ from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.utils.text import slugify
 
+from core.uploads import RandomFilename, validate_startup_document
+
 
 class Startup(models.Model):
     STATUS_CHOICES = [
@@ -91,7 +93,10 @@ class Document(models.Model):
     startup = models.ForeignKey(Startup, on_delete=models.CASCADE, related_name='docs')
     name = models.CharField(max_length=140)
     size = models.CharField(max_length=20, blank=True)
-    file = models.FileField(upload_to='startup_docs/', blank=True, null=True)
+    file = models.FileField(
+        upload_to=RandomFilename('startup_docs'), blank=True, null=True,
+        validators=[validate_startup_document],
+    )
     order = models.PositiveIntegerField(default=0)
 
     class Meta:

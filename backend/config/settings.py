@@ -56,6 +56,7 @@ INSTALLED_APPS = [
     'posts',
     'messaging',
     'notifications',
+    'audit',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -67,6 +68,7 @@ MIDDLEWARE = [
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'audit.log.AuditContextMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
@@ -158,6 +160,12 @@ STATIC_URL = 'static/'
 
 MEDIA_URL = 'media/'
 MEDIA_ROOT = BASE_DIR / 'media'
+
+# Uploads (SEC-06). Per-type allowlists and size caps live in core/uploads.py.
+# Files over this size are streamed to a temp file instead of held in memory.
+FILE_UPLOAD_MAX_MEMORY_SIZE = 5 * 1024 * 1024
+# Never let the browser guess a content type (blocks HTML-in-image tricks).
+SECURE_CONTENT_TYPE_NOSNIFF = True
 
 
 # Default primary key field type

@@ -90,7 +90,8 @@ export default function EditProfileModal({ open, onClose }) {
       }, 1200);
     } catch (err) {
       console.error(err);
-      alert('Failed to save profile. Please check the inputs.');
+      const fileError = err?.data?.avatar?.[0] || err?.data?.resume?.[0];
+      alert(fileError || 'Failed to save profile. Please check the inputs.');
     } finally {
       setIsSubmitting(false);
     }
@@ -131,7 +132,7 @@ export default function EditProfileModal({ open, onClose }) {
               <>
                 <div className="field">
                   <label>Profile Picture</label>
-                  <input type="file" accept="image/*" onChange={(e) => setAvatarFile(e.target.files[0])} className="input" />
+                  <input type="file" accept=".jpg,.jpeg,.png,.gif,.webp" onChange={(e) => setAvatarFile(e.target.files[0])} className="input" />
                 </div>
                 <div className="field">
                   <label>Full Name</label>

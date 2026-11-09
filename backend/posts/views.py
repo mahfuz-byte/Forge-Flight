@@ -4,12 +4,13 @@ from rest_framework.response import Response
 
 from accounts.models import Role
 from accounts.permissions import IsOwnerOrReadOnly
+from audit.mixins import AuditStaffActionsMixin
 
 from .models import Post
 from .serializers import PostSerializer
 
 
-class PostViewSet(viewsets.ModelViewSet):
+class PostViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
     queryset = Post.objects.select_related('startup', 'author')
     serializer_class = PostSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]

@@ -6,6 +6,8 @@ from rest_framework.response import Response
 
 from accounts.models import Role
 from accounts.permissions import IsOwnerOrReadOnly
+from audit.log import record
+from audit.mixins import AuditStaffActionsMixin
 from .models import Application, Investment, StartupComment, Startup
 from .serializers import (
     ApplicationSerializer,
@@ -16,7 +18,7 @@ from .serializers import (
 )
 
 
-class StartupViewSet(viewsets.ModelViewSet):
+class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
     queryset = Startup.objects.select_related('owner').prefetch_related(
         'team', 'timeline', 'docs', 'updates', 'comments__author', 'collab',
     )
@@ -40,6 +42,7 @@ class StartupViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
         write_serializer = self.get_serializer(instance, data=request.data, partial=kwargs.get('partial', False))
         write_serializer.is_valid(raise_exception=True)
+        self.audit_if_staff(instance, 'update', fields=sorted(write_serializer.validated_data))
         instance = write_serializer.save()
         return Response(StartupDetailSerializer(instance).data)
 
@@ -68,7 +71,8 @@ class StartupViewSet(viewsets.ModelViewSet):
         return Response(status=204)
 
 
-class StartupCommentViewSet(viewsets.ModelViewSet):
+class StartupCommentViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
+    audit_label = 'comment'
     queryset = StartupComment.objects.select_related('author', 'startup')
     serializer_class = StartupCommentSerializer
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
@@ -135,12 +139,20 @@ class InvestmentViewSet(viewsets.ModelViewSet):
             qs = qs.filter(investor=self.request.user)
         return qs
 
+    def perform_create(self, serializer):
+        serializer.save()
+        inv = serializer.instance
+        record('investment.create', inv, amount=str(inv.amount), startup=inv.startup_id)
+
     def perform_update(self, serializer):
         if serializer.instance.investor_id != self.request.user.id:
             raise PermissionDenied('Only the investor can edit this investment request.')
+        old_amount = str(serializer.instance.amount)
         serializer.save()
+        record('investment.update', serializer.instance, amount=[old_amount, str(serializer.instance.amount)])
 
     def perform_destroy(self, instance):
         if instance.investor_id != self.request.user.id:
             raise PermissionDenied('Only the investor can cancel this investment request.')
+        record('investment.delete', instance, amount=str(instance.amount), startup=instance.startup_id)
         instance.delete()

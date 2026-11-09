@@ -2,6 +2,8 @@ from django.contrib.auth.models import AbstractUser
 from django.db import models
 from django.db.models.functions import Lower
 
+from core.uploads import RandomFilename, validate_avatar, validate_resume
+
 from .managers import UserManager, normalize_email
 
 
@@ -35,13 +37,17 @@ class User(AbstractUser):
     email_verified = models.BooleanField(default=False)
     
     # General Profile
-    avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
+    avatar = models.ImageField(
+        upload_to=RandomFilename('avatars'), null=True, blank=True, validators=[validate_avatar],
+    )
     headline = models.CharField(max_length=120, blank=True)
     bio = models.TextField(blank=True)
     location = models.CharField(max_length=120, blank=True)
     
     # Collaborator Profile
-    resume = models.FileField(upload_to='resumes/', null=True, blank=True)
+    resume = models.FileField(
+        upload_to=RandomFilename('resumes'), null=True, blank=True, validators=[validate_resume],
+    )
     skills = models.CharField(max_length=255, blank=True) # Comma-separated list
     experience_level = models.CharField(max_length=50, blank=True)
     portfolio_link = models.URLField(blank=True)

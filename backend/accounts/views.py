@@ -7,6 +7,8 @@ from rest_framework.response import Response
 from rest_framework.settings import api_settings
 from rest_framework.throttling import SimpleRateThrottle
 
+from audit.log import record
+
 from . import throttling
 from .google import GoogleAuthError, verify_google_credential
 from .managers import normalize_email
@@ -73,6 +75,7 @@ def login_view(request):
         return Response({'detail': 'Email and password are required.'}, status=400)
 
     if throttling.is_locked_out(email):
+        record('auth.login_locked_out', email=email)
         return Response(
             {'detail': 'Too many failed attempts. Try again in a few minutes.'},
             status=status.HTTP_429_TOO_MANY_REQUESTS,
@@ -81,15 +84,19 @@ def login_view(request):
     user = authenticate(request, username=email, password=password)
     if user is None:
         throttling.record_failure(email)
+        record('auth.login_failed', email=email)
         return Response({'detail': 'Invalid credentials.'}, status=400)
 
     throttling.clear_failures(email)
+    record('auth.login', user, actor=user, method='password')
     return _start_session(request, user)
 
 
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def logout_view(request):
+    if request.user.is_authenticated:
+        record('auth.logout', request.user)
     logout(request)  # flushes the server-side session and rotates the CSRF token
     return Response(status=204)
 
@@ -112,8 +119,10 @@ def change_password(request):
     serializer = ChangePasswordSerializer(data=request.data, context={'request': request})
     serializer.is_valid(raise_exception=True)
     user = request.user
+    had_password = user.has_usable_password()
     user.set_password(serializer.validated_data['new_password'])
     user.save(update_fields=['password'])
+    record('auth.password_changed', user, had_password=had_password)
     # Other sessions are invalidated by the new password hash; keep this one.
     update_session_auth_hash(request, user)
     request.session.cycle_key()
@@ -153,6 +162,7 @@ def google_login(request):
     try:
         identity = verify_google_credential(request.data.get('credential'))
     except GoogleAuthError as exc:
+        record('auth.google_failed', reason=str(exc))
         return Response({'detail': str(exc)}, status=400)
 
     if not identity.email_verified:
@@ -171,6 +181,7 @@ def google_login(request):
             return _inactive_response()
         social.last_login_at = timezone.now()
         social.save(update_fields=['last_login_at'])
+        record('auth.login', social.user, actor=social.user, method='google')
         return _start_session(request, social.user)
 
     # 2. Signed in already → this is an explicit "connect Google" action.
@@ -178,6 +189,7 @@ def google_login(request):
         if SocialAccount.objects.filter(user=request.user, provider=SocialAccount.PROVIDER_GOOGLE).exists():
             return Response({'detail': 'A different Google account is already linked.'}, status=409)
         _link_google(request.user, identity)
+        record('auth.google_linked', request.user, google_email=email)
         return Response(UserSerializer(request.user).data)
 
     existing = User.objects.filter(email__iexact=email).first()
@@ -191,6 +203,8 @@ def google_login(request):
         if SocialAccount.objects.filter(user=existing, provider=SocialAccount.PROVIDER_GOOGLE).exists():
             return Response({'detail': 'A different Google account is already linked to this account.'}, status=409)
         _link_google(existing, identity)
+        record('auth.google_linked', existing, actor=existing, google_email=email, automatic=True)
+        record('auth.login', existing, actor=existing, method='google')
         return _start_session(request, existing)
 
     # 4. New user → create a fully initialised local account.
@@ -203,5 +217,6 @@ def google_login(request):
             email_verified=True,
         )
         _link_google(user, identity)
+    record('auth.login', user, actor=user, method='google', new_account=True)
     return _start_session(request, user, status_code=201, created=True)
 

@@ -78,8 +78,10 @@ export default function CreatePostModal() {
       reset();
       closeCreatePost();
       navigate('/feed');
-    } catch {
-      setError('Could not publish your update — try again.');
+    } catch (err) {
+      // Surface the server's reason for a rejected attachment (wrong type, too large).
+      const mediaError = err?.data?.media?.[0];
+      setError(mediaError || 'Could not publish your update — try again.');
     } finally {
       setBusy(false);
     }
@@ -127,8 +129,8 @@ export default function CreatePostModal() {
             <input id="cp-tags" type="text" placeholder="AI, Healthcare, Startup" value={tags} onChange={(e) => setTags(e.target.value)} />
           </div>
           <div className="field">
-            <label htmlFor="cp-media">Attachment <span className="field-hint">(image, video, document — optional)</span></label>
-            <input id="cp-media" type="file" onChange={(e) => setMedia(e.target.files[0] || '')} />
+            <label htmlFor="cp-media">Attachment <span className="field-hint">(image, video, PDF or Office file, up to 50 MB — optional)</span></label>
+            <input id="cp-media" type="file" accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.mov,.m4v,.webm,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx" onChange={(e) => setMedia(e.target.files[0] || '')} />
           </div>
           {error && <p className="modal-error">{error}</p>}
           <div className="modal-actions">
