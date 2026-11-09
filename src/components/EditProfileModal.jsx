@@ -64,7 +64,6 @@ export default function EditProfileModal({ open, onClose }) {
         const [first, ...rest] = name.trim().split(' ');
         patch.append('first_name', first || '');
         patch.append('last_name', rest.join(' '));
-        patch.append('email', email);
         patch.append('bio', bio);
         patch.append('headline', headline);
         patch.append('location', location);
@@ -78,7 +77,7 @@ export default function EditProfileModal({ open, onClose }) {
         if (resumeFile) patch.append('resume', resumeFile);
       } else {
         patch = {
-          name, email, bio, headline, location, 
+          name, bio, headline, location, 
           skills, experience_level: experienceLevel, portfolio_link: portfolioLink,
           investor_type: investorType, investment_budget: investmentBudget, investment_interests: investmentInterests
         };
@@ -140,7 +139,7 @@ export default function EditProfileModal({ open, onClose }) {
                 </div>
                 <div className="field">
                   <label>Email</label>
-                  <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required className="input" />
+                  <input type="email" value={email} readOnly disabled className="input" title="Email changes aren't supported yet" />
                 </div>
                 <div className="field">
                   <label>Headline (e.g. Senior Backend Engineer)</label>

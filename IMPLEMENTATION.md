@@ -169,7 +169,7 @@ Two settings make this work cross-origin in dev: `CORS_ALLOW_CREDENTIALS = True`
 
 ### 5.7 Seed data
 
-`python manage.py seed_demo` (defined in `backend/core/management/commands/seed_demo.py`) populates the database with 5 demo startups (HealthSync, EcoRide, MedAI, FarmChain, Nimbus Robotics) — including their team, timeline, documents, updates, comments, and one seed post each — transcribed directly from the original frontend-only mockup's hardcoded data. It also creates a `User` for each startup's owner and each comment's author, all with the password `password123`.
+`python manage.py seed_demo` (defined in `backend/core/management/commands/seed_demo.py`) populates the database with 5 demo startups (HealthSync, EcoRide, MedAI, FarmChain, Nimbus Robotics) — including their team, timeline, documents, updates, comments, and one seed post each — transcribed directly from the original frontend-only mockup's hardcoded data. It also creates a `User` for each startup's owner and each comment's author, all with the password from `DEMO_PASSWORD` (or a random one printed at the end). The command refuses to run unless `DEBUG=True`.
 
 It's **idempotent** — built on `Startup.objects.update_or_create(slug=...)`, so re-running it after a fresh `migrate` (e.g. after wiping the database) just re-syncs the same data rather than erroring on duplicates.
 

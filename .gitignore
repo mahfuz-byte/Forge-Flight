@@ -31,3 +31,10 @@ backend/.env
 *.njsproj
 *.sln
 *.sw?
+
+# Local scratch files (may contain session cookies)
+cookies.txt
+testfile.txt
+
+# Understand-Anything knowledge graph
+.ua/

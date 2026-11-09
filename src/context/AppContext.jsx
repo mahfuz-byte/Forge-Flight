@@ -25,6 +25,9 @@ function transformUser(u) {
     name: u.name,
     initials: u.initials,
     email: u.email,
+    role: u.role || 'user',
+    hasPassword: u.has_password ?? true,
+    googleLinked: Boolean(u.google_linked),
     bio: u.bio || '',
     location: u.location || '',
     avatar: u.avatar ? (u.avatar.startsWith('http') ? u.avatar : `http://127.0.0.1:8000${u.avatar}`) : null,
@@ -214,8 +217,8 @@ export function AppProvider({ children }) {
     return () => { cancelled = true; };
   }, []);
 
-  async function login(email, password) {
-    const user = await api.post('/auth/login/', { email, password });
+  // Shared by every way of signing in: load the user's private data.
+  async function startSession(user) {
     setCurrentUser(transformUser(user));
     setSignedIn(true);
     const [appList, investList] = await Promise.all([
@@ -226,6 +229,19 @@ export function AppProvider({ children }) {
     setInvestments(investList.map(transformInvestment));
     await loadInbox(user.id);
     return user;
+  }
+
+  async function login(email, password) {
+    const user = await api.post('/auth/login/', { email, password });
+    return startSession(user);
+  }
+
+  // Exchanges a Google ID token for a session. An existing account with the
+  // same email is linked automatically by the backend.
+  async function googleSignIn(credential) {
+    const user = await api.post('/auth/google/', { credential });
+    await startSession(user);
+    return { user, created: Boolean(user.created) };
   }
 
   async function registerUser({ name, email, password }) {
@@ -268,7 +284,6 @@ export function AppProvider({ children }) {
       body.first_name = first || '';
       body.last_name = rest.join(' ');
     }
-    if (patch.email !== undefined) body.email = patch.email;
     if (patch.bio !== undefined) body.bio = patch.bio;
     if (patch.location !== undefined) body.location = patch.location;
     if (patch.headline !== undefined) body.headline = patch.headline;
@@ -508,7 +523,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider
       value={{
-        currentUser, updateCurrentUser, registerUser, login, logOut, signedIn, setSignedIn,
+        currentUser, updateCurrentUser, registerUser, login, googleSignIn, logOut, signedIn, setSignedIn,
         theme, setTheme, toggleTheme,
         startups, createStartup, myStartups, collaboratingIds,
         saved, toggleSaved,

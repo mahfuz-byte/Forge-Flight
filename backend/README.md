@@ -48,7 +48,7 @@ All endpoints live under `/api/`. Auth is Django session auth (`/api/auth/login/
 
 Key resources: `/api/startups/` (+ `/save/`, `/unsave/`, `/follow/`, `/unfollow/` actions, list vs detail serializers), `/api/comments/?startup=<slug>`, `/api/applications/?startup=<slug>&mine=1`, `/api/investments/`, `/api/posts/?startup=<slug>`, `/api/conversations/`, `/api/messages/?conversation=<id>`, `/api/notifications/`.
 
-Every demo user seeded by `seed_demo` has password `password123` (e.g. `amara@healthsync.io` owns HealthSync).
+Every demo user seeded by `seed_demo` gets the password from `DEMO_PASSWORD`, or a random one printed when the command finishes (e.g. `amara@healthsync.io` owns HealthSync).
 
 ## Notes
 

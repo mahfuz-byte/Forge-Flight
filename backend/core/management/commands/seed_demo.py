@@ -1,4 +1,8 @@
-from django.core.management.base import BaseCommand
+import secrets
+
+from decouple import config
+from django.conf import settings
+from django.core.management.base import BaseCommand, CommandError
 from django.db import transaction
 
 from accounts.models import User
@@ -15,7 +19,9 @@ from startups.models import (
     UpdateEntry,
 )
 
-DEMO_PASSWORD = 'password123'
+# Never hardcode a shared demo password: take it from the environment, or
+# generate a fresh one per run and print it once.
+DEMO_PASSWORD = config('DEMO_PASSWORD', default='') or secrets.token_urlsafe(12)
 
 STARTUPS = {
     'healthsync': {
@@ -154,6 +160,8 @@ class Command(BaseCommand):
 
     @transaction.atomic
     def handle(self, *args, **options):
+        if not settings.DEBUG:
+            raise CommandError('seed_demo creates accounts with a known password; it only runs with DEBUG=True.')
         comment_author_emails = {}
 
         for slug, data in STARTUPS.items():
@@ -263,5 +271,5 @@ class Command(BaseCommand):
 
         self.stdout.write(self.style.SUCCESS(
             f'Done. {Startup.objects.count()} startups, {Post.objects.count()} posts, '
-            f'{User.objects.count()} users. Demo password: {DEMO_PASSWORD}',
+            f'{User.objects.count()} users. Password for newly created demo users: {DEMO_PASSWORD}',
         ))

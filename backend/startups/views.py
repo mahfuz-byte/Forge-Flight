@@ -1,7 +1,11 @@
+from django.db.models import Q
 from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
+from accounts.models import Role
+from accounts.permissions import IsOwnerOrReadOnly
 from .models import Application, Investment, StartupComment, Startup
 from .serializers import (
     ApplicationSerializer,
@@ -12,19 +16,14 @@ from .serializers import (
 )
 
 
-class IsOwnerOrReadOnly(permissions.BasePermission):
-    def has_object_permission(self, request, view, obj):
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return obj.owner_id == request.user.id
-
-
 class StartupViewSet(viewsets.ModelViewSet):
     queryset = Startup.objects.select_related('owner').prefetch_related(
         'team', 'timeline', 'docs', 'updates', 'comments__author', 'collab',
     )
     lookup_field = 'slug'
     permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    owner_field = 'owner_id'
+    staff_roles = (Role.ADMIN,)
 
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
@@ -72,7 +71,9 @@ class StartupViewSet(viewsets.ModelViewSet):
 class StartupCommentViewSet(viewsets.ModelViewSet):
     queryset = StartupComment.objects.select_related('author', 'startup')
     serializer_class = StartupCommentSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    owner_field = 'author_id'
+    staff_roles = (Role.MODERATOR, Role.ADMIN)
 
     def get_queryset(self):
         qs = super().get_queryset()
@@ -89,7 +90,11 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # Visible to the applicant and to the owner of the startup applied to.
+        user = self.request.user
         qs = super().get_queryset()
+        if not user.has_role(Role.ADMIN):
+            qs = qs.filter(Q(applicant=user) | Q(startup__owner=user))
         startup_slug = self.request.query_params.get('startup')
         if startup_slug:
             qs = qs.filter(startup__slug=startup_slug)
@@ -98,6 +103,18 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             qs = qs.filter(applicant=self.request.user)
         return qs
 
+    def perform_update(self, serializer):
+        # Only the applicant edits their application. Accept/decline by the
+        # startup owner is a separate, explicit operation (Phase 3, BE-01).
+        if serializer.instance.applicant_id != self.request.user.id:
+            raise PermissionDenied('Only the applicant can edit this application.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.applicant_id != self.request.user.id:
+            raise PermissionDenied('Only the applicant can withdraw this application.')
+        instance.delete()
+
 
 class InvestmentViewSet(viewsets.ModelViewSet):
     queryset = Investment.objects.select_related('investor', 'startup')
@@ -105,7 +122,11 @@ class InvestmentViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def get_queryset(self):
+        # Visible to the investor, the startup's owner and finance staff.
+        user = self.request.user
         qs = super().get_queryset()
+        if not user.has_role(Role.FINANCE_ADMIN, Role.ADMIN):
+            qs = qs.filter(Q(investor=user) | Q(startup__owner=user))
         startup_slug = self.request.query_params.get('startup')
         if startup_slug:
             qs = qs.filter(startup__slug=startup_slug)
@@ -113,3 +134,13 @@ class InvestmentViewSet(viewsets.ModelViewSet):
         if mine:
             qs = qs.filter(investor=self.request.user)
         return qs
+
+    def perform_update(self, serializer):
+        if serializer.instance.investor_id != self.request.user.id:
+            raise PermissionDenied('Only the investor can edit this investment request.')
+        serializer.save()
+
+    def perform_destroy(self, instance):
+        if instance.investor_id != self.request.user.id:
+            raise PermissionDenied('Only the investor can cancel this investment request.')
+        instance.delete()

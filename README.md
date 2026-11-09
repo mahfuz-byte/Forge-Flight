@@ -68,7 +68,7 @@ python manage.py runserver
 
 Leave this running. Check it's alive: open **http://localhost:8000/api/health/** — you should see `{"status": "ok"}`.
 
-Every demo user seeded by `seed_demo` uses the password **`password123`** — e.g. `amara@healthsync.io` (owns HealthSync), `daniel@medai.io` (owns MedAI). Full endpoint reference: [`backend/README.md`](backend/README.md).
+Demo users created by `seed_demo` get the password in `DEMO_PASSWORD` (backend `.env`), or a random one printed at the end of the run — e.g. `amara@healthsync.io` (owns HealthSync), `daniel@medai.io` (owns MedAI). Full endpoint reference: [`backend/README.md`](backend/README.md).
 
 ## 4. Set up the frontend
 
@@ -100,7 +100,7 @@ Open **http://localhost:5173** in your browser.
 
 ## 5. Try it out
 
-- Click **Log in** — the form is prefilled with `amara@healthsync.io` / `password123`. Sign in and you'll land on `/feed` with real posts from the seeded startups.
+- Click **Log in** and sign in as `amara@healthsync.io` with the demo password. Sign in and you'll land on `/feed` with real posts from the seeded startups.
 - Open a startup profile and check the Team / Timeline / Documents / Comments tabs — all real data from the database, not mocks.
 - Post a comment, then refresh the page — it's still there (confirms it's backend-persisted, not local React state).
 - Try **Create Startup** from `/account`, or **Register** a brand-new account from the login screen.

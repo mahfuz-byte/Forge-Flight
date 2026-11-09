@@ -13,6 +13,14 @@ from .models import (
 )
 
 
+class StartupImmutableOnUpdateMixin:
+    """The startup a comment/application/investment belongs to can't be moved later."""
+
+    def update(self, instance, validated_data):
+        validated_data.pop('startup', None)
+        return super().update(instance, validated_data)
+
+
 class CollaborationRoleSerializer(serializers.ModelSerializer):
     class Meta:
         model = CollaborationRole
@@ -43,7 +51,7 @@ class UpdateEntrySerializer(serializers.ModelSerializer):
         fields = ['id', 'text', 'created_at']
 
 
-class StartupCommentSerializer(serializers.ModelSerializer):
+class StartupCommentSerializer(StartupImmutableOnUpdateMixin, serializers.ModelSerializer):
     author_name = serializers.ReadOnlyField(source='author.name')
 
     class Meta:
@@ -82,7 +90,7 @@ class StartupWriteSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class ApplicationSerializer(serializers.ModelSerializer):
+class ApplicationSerializer(StartupImmutableOnUpdateMixin, serializers.ModelSerializer):
     class Meta:
         model = Application
         fields = [
@@ -96,7 +104,7 @@ class ApplicationSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class InvestmentSerializer(serializers.ModelSerializer):
+class InvestmentSerializer(StartupImmutableOnUpdateMixin, serializers.ModelSerializer):
     class Meta:
         model = Investment
         fields = ['id', 'startup', 'investor', 'amount', 'status', 'created_at']

@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/6.0/ref/settings/
 
 from pathlib import Path
 
+from django.core.exceptions import ImproperlyConfigured
+
 from decouple import Csv, config
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
@@ -21,11 +23,17 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
 
-# SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = config('DJANGO_SECRET_KEY', default='django-insecure-p3v2=42)r(#7o+=a0&1#kk(5f#r6z%-*)^7kw)0%l7=)tvn0*x')
-
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = config('DJANGO_DEBUG', default=True, cast=bool)
+# Defaults to off: debug mode must be switched on explicitly in a local .env.
+DEBUG = config('DJANGO_DEBUG', default=False, cast=bool)
+
+# SECURITY WARNING: keep the secret key used in production secret!
+# Never commit a real key. Outside DEBUG the app refuses to start without one.
+SECRET_KEY = config('DJANGO_SECRET_KEY', default='')
+if not SECRET_KEY or SECRET_KEY == 'change-me':
+    if not DEBUG:
+        raise ImproperlyConfigured('Set DJANGO_SECRET_KEY in the environment.')
+    SECRET_KEY = 'django-insecure-local-development-only'
 
 ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=Csv())
 
@@ -120,6 +128,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
     {
         'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+        'OPTIONS': {'min_length': 10},
     },
     {
         'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
@@ -161,4 +170,49 @@ REST_FRAMEWORK = {
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',
     ],
+    'DEFAULT_THROTTLE_RATES': {
+        # Login, register, Google sign-in/link and password change, per client IP.
+        'auth': config('AUTH_THROTTLE_RATE', default='10/min'),
+    },
+    # Number of trusted reverse proxies in front of Django, so throttling keys
+    # on the real client IP from X-Forwarded-For rather than the proxy's.
+    'NUM_PROXIES': config('NUM_PROXIES', default=0, cast=int),
 }
+
+
+# Caching (used by login throttling). LocMem is per-process: in production
+# point DJANGO_REDIS_URL at Redis so every worker shares the counters.
+_redis_url = config('DJANGO_REDIS_URL', default='')
+CACHES = {
+    'default': (
+        {'BACKEND': 'django.core.cache.backends.redis.RedisCache', 'LOCATION': _redis_url}
+        if _redis_url else
+        {'BACKEND': 'django.core.cache.backends.locmem.LocMemCache'}
+    ),
+}
+
+# Per-account lockout after repeated failed passwords (AUTH-08).
+LOGIN_MAX_FAILURES = config('LOGIN_MAX_FAILURES', default=5, cast=int)
+LOGIN_LOCKOUT_SECONDS = config('LOGIN_LOCKOUT_SECONDS', default=15 * 60, cast=int)
+
+
+# Sessions & cookies (AUTH-05). The session id lives in an HttpOnly cookie the
+# frontend's JavaScript can't read; the CSRF cookie must stay JS-readable.
+SESSION_COOKIE_AGE = config('SESSION_COOKIE_AGE', default=7 * 24 * 60 * 60, cast=int)
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = config('SESSION_COOKIE_SAMESITE', default='Lax')
+CSRF_COOKIE_SAMESITE = SESSION_COOKIE_SAMESITE
+SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=not DEBUG, cast=bool)
+CSRF_COOKIE_SECURE = SESSION_COOKIE_SECURE
+
+if not DEBUG:
+    SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=True, cast=bool)
+    SECURE_HSTS_SECONDS = config('SECURE_HSTS_SECONDS', default=60 * 60 * 24 * 30, cast=int)
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    if config('BEHIND_TLS_PROXY', default=False, cast=bool):
+        SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+
+# Google sign-in (AUTH-02). The OAuth 2.0 *Web* client id from Google Cloud
+# Console; ID tokens whose audience isn't this id are rejected.
+GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default='')

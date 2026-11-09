@@ -2,6 +2,9 @@ from rest_framework import permissions, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from accounts.models import Role
+from accounts.permissions import IsOwnerOrReadOnly
+
 from .models import Post
 from .serializers import PostSerializer
 
@@ -9,7 +12,9 @@ from .serializers import PostSerializer
 class PostViewSet(viewsets.ModelViewSet):
     queryset = Post.objects.select_related('startup', 'author')
     serializer_class = PostSerializer
-    permission_classes = [permissions.IsAuthenticatedOrReadOnly]
+    permission_classes = [permissions.IsAuthenticatedOrReadOnly, IsOwnerOrReadOnly]
+    owner_field = 'author_id'
+    staff_roles = (Role.MODERATOR, Role.ADMIN)
 
     def get_queryset(self):
         qs = super().get_queryset()
