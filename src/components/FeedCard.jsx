@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Icon } from './IconSprite';
 import LogoBadge from './LogoBadge';
 import Avatar from './Avatar';
+import ReportButton from './ReportButton';
 import InvestButton from './InvestButton';
 import { fmtMoney, fundingPct, statusMeta, LOGO_GRADIENTS } from '../data/startups';
 import { POST_TYPES } from '../data/posts';
@@ -227,7 +228,6 @@ function useServerToggle() {
 }
 
 export default function FeedCard({ post }) {
-  const [reported, setReported] = useState(false);
   const navigate = useNavigate();
   const { currentUser, startups, saved, toggleSaved, followed, toggleFollow, toggleLikePost, deletePost, pinPost, editPost, myStartups } = useApp();
   const [busy, run] = useServerToggle();
@@ -297,7 +297,7 @@ export default function FeedCard({ post }) {
             )}
           </>
         )}
-        <button className={`action-btn${reported ? ' reported' : ''}`} disabled={reported} onClick={() => setReported(true)}><Icon name="flag" />{reported ? 'Reported' : 'Report'}</button>
+        {!isOwner && <ReportButton targetType="post" targetId={post.id} />}
       </div>
     </article>
   );

@@ -70,6 +70,14 @@ All state changes go through `startups/services.py` (one transaction each, rows 
 - `Startup.raised` = `external_raised` (prior, off-platform funding, set by staff in Django admin) + accepted investments. Clients can't write it. Reaching the goal closes the round automatically.
 - Rule violations return 400, and state conflicts (already decided, duplicates) return 409, both with a human-readable `detail`.
 
+## Admin panel (`/admin` in the app, `/api/admin/` in the API)
+
+- Roles and what they can open live in `adminpanel/capabilities.py` (e.g. `content.moderate` → admin, moderator). Super admins hold every capability.
+- `GET /api/admin/me/` returns the admin's role and capabilities; the frontend builds its menu from it, and every admin endpoint checks the capability again server-side.
+- `GET /api/admin/dashboard/` returns totals, 12-month growth series and recent activity. `GET /api/admin/activity/` returns the audit log, paginated (`page`, `page_size` up to 100) and filterable (`q`, `action`, `actor_role`, `since`, `until`).
+- New admin endpoints: inherit `core.admin_api.AdminAPIMixin`, set `admin_capability`, and get pagination and audit logging of writes for free.
+- `POST /api/reports/` lets members report a post, comment, startup or user (one open report per person per item). Moderators work through them in Phase 6.
+
 ## Notes
 
 - `venv/` and `.env` are gitignored — `requirements.txt` and `.env.example` are the source of truth for recreating them.

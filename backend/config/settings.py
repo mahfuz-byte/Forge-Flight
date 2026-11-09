@@ -57,6 +57,8 @@ INSTALLED_APPS = [
     'messaging',
     'notifications',
     'audit',
+    'moderation',
+    'adminpanel',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'

@@ -27,6 +27,8 @@ urlpatterns = [
     path('api/', include('posts.urls')),
     path('api/', include('messaging.urls')),
     path('api/', include('notifications.urls')),
+    path('api/', include('moderation.urls')),
+    path('api/', include('adminpanel.urls')),
 ]
 
 if settings.DEBUG:

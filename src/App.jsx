@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { AppProvider } from './context/AppContext';
 import IconSprite from './components/IconSprite';
@@ -13,6 +14,9 @@ import Notifications from './pages/Notifications';
 import FounderDashboard from './pages/FounderDashboard';
 import AccountProfile from './pages/AccountProfile';
 import Settings from './pages/Settings';
+
+// The admin panel is its own bundle: regular users never download it.
+const AdminApp = lazy(() => import('./admin/AdminApp'));
 
 export default function App() {
   return (
@@ -31,6 +35,10 @@ export default function App() {
           <Route path="/account" element={<AccountProfile />} />
           <Route path="/dashboard/:id" element={<FounderDashboard />} />
           <Route path="/settings" element={<Settings />} />
+          <Route
+            path="/admin/*"
+            element={<Suspense fallback={<div style={{ padding: 40, textAlign: 'center' }}>Loading admin panel…</div>}><AdminApp /></Suspense>}
+          />
           <Route path="*" element={<Landing />} />
         </Routes>
         <CreatePostModal />
