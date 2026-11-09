@@ -6,16 +6,32 @@ from rest_framework.response import Response
 
 from accounts.models import Role
 from accounts.permissions import IsOwnerOrReadOnly
-from audit.log import record
 from audit.mixins import AuditStaffActionsMixin
+from . import services
 from .models import Application, Investment, StartupComment, Startup
 from .serializers import (
     ApplicationSerializer,
+    CollaborationRoleSerializer,
     InvestmentSerializer,
     StartupCommentSerializer,
     StartupDetailSerializer,
     StartupWriteSerializer,
+    api_error,
 )
+
+
+def _run(fn, *args, **kwargs):
+    """Call a service, mapping its errors onto HTTP responses (BE-10)."""
+    try:
+        return fn(*args, **kwargs)
+    except services.BusinessRuleError as exc:
+        raise api_error(exc)
+    except PermissionError:
+        raise PermissionDenied('Only the startup owner can do this.')
+
+
+def _decision(request):
+    return str(request.data.get('note') or request.data.get('reason') or '').strip()
 
 
 class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
@@ -45,6 +61,21 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
         self.audit_if_staff(instance, 'update', fields=sorted(write_serializer.validated_data))
         instance = write_serializer.save()
         return Response(StartupDetailSerializer(instance).data)
+
+    @action(detail=True, methods=['put', 'patch'], url_path='collaboration')
+    def collaboration(self, request, slug=None):
+        """Create/update the collaboration listing; ``is_open`` publishes it (BE-07)."""
+        startup = self.get_object()  # IsOwnerOrReadOnly: owner or admin only
+        current = getattr(startup, 'collab', None)
+        data = request.data
+        collab = _run(
+            services.save_collaboration, startup,
+            data.get('role', current.role if current else ''),
+            data.get('body', current.body if current else ''),
+            _as_bool(data.get('is_open', current.is_open if current else True)),
+        )
+        self.audit_if_staff(startup, 'collaboration_update')
+        return Response(CollaborationRoleSerializer(collab).data)
 
     @action(detail=True, methods=['post'], permission_classes=[permissions.IsAuthenticated])
     def save(self, request, slug=None):
@@ -92,6 +123,8 @@ class ApplicationViewSet(viewsets.ModelViewSet):
     queryset = Application.objects.select_related('applicant', 'startup')
     serializer_class = ApplicationSerializer
     permission_classes = [permissions.IsAuthenticated]
+    # No DELETE: withdrawing keeps the record (POST .../withdraw/).
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def get_queryset(self):
         # Visible to the applicant and to the owner of the startup applied to.
@@ -114,16 +147,30 @@ class ApplicationViewSet(viewsets.ModelViewSet):
             raise PermissionDenied('Only the applicant can edit this application.')
         serializer.save()
 
-    def perform_destroy(self, instance):
-        if instance.applicant_id != self.request.user.id:
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        app = _run(services.decide_application, self.get_object(), request.user, accept=True)
+        return Response(ApplicationSerializer(app).data)
+
+    @action(detail=True, methods=['post'])
+    def decline(self, request, pk=None):
+        app = _run(services.decide_application, self.get_object(), request.user, accept=False)
+        return Response(ApplicationSerializer(app).data)
+
+    @action(detail=True, methods=['post'])
+    def withdraw(self, request, pk=None):
+        app = self.get_object()
+        if app.applicant_id != request.user.id:
             raise PermissionDenied('Only the applicant can withdraw this application.')
-        instance.delete()
+        return Response(ApplicationSerializer(_run(services.withdraw_application, app, request.user)).data)
 
 
 class InvestmentViewSet(viewsets.ModelViewSet):
     queryset = Investment.objects.select_related('investor', 'startup')
     serializer_class = InvestmentSerializer
     permission_classes = [permissions.IsAuthenticated]
+    # No DELETE: requests are withdrawn/rejected, never erased (BE-02).
+    http_method_names = ['get', 'post', 'patch', 'head', 'options']
 
     def get_queryset(self):
         # Visible to the investor, the startup's owner and finance staff.
@@ -139,20 +186,30 @@ class InvestmentViewSet(viewsets.ModelViewSet):
             qs = qs.filter(investor=self.request.user)
         return qs
 
-    def perform_create(self, serializer):
-        serializer.save()
-        inv = serializer.instance
-        record('investment.create', inv, amount=str(inv.amount), startup=inv.startup_id)
-
     def perform_update(self, serializer):
         if serializer.instance.investor_id != self.request.user.id:
             raise PermissionDenied('Only the investor can edit this investment request.')
-        old_amount = str(serializer.instance.amount)
         serializer.save()
-        record('investment.update', serializer.instance, amount=[old_amount, str(serializer.instance.amount)])
 
-    def perform_destroy(self, instance):
-        if instance.investor_id != self.request.user.id:
-            raise PermissionDenied('Only the investor can cancel this investment request.')
-        record('investment.delete', instance, amount=str(instance.amount), startup=instance.startup_id)
-        instance.delete()
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        inv = _run(services.decide_investment, self.get_object(), request.user, accept=True, note=_decision(request))
+        return Response(InvestmentSerializer(inv).data)
+
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        inv = _run(services.decide_investment, self.get_object(), request.user, accept=False, note=_decision(request))
+        return Response(InvestmentSerializer(inv).data)
+
+    @action(detail=True, methods=['post'])
+    def withdraw(self, request, pk=None):
+        inv = self.get_object()
+        if inv.investor_id != request.user.id:
+            raise PermissionDenied('Only the investor can withdraw this request.')
+        return Response(InvestmentSerializer(_run(services.withdraw_investment, inv, request.user)).data)
+
+
+def _as_bool(value):
+    if isinstance(value, str):
+        return value.strip().lower() in ('1', 'true', 'yes', 'on')
+    return bool(value)

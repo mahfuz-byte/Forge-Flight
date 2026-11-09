@@ -107,14 +107,15 @@ class StaffActionAuditTests(APITestCase):
 
     def test_investment_lifecycle_is_logged(self):
         investor = User.objects.create_user('inv@example.com', PW)
+        Startup.objects.filter(pk='acme').update(goal=10_000, status='open')
         self.client.force_authenticate(investor)
         res = self.client.post('/api/investments/', {'startup': 'acme', 'amount': 500})
         self.assertEqual(res.status_code, 201, res.data)
         self.client.patch(f'/api/investments/{res.data["id"]}/', {'amount': 750})
-        self.client.delete(f'/api/investments/{res.data["id"]}/')
+        self.client.post(f'/api/investments/{res.data["id"]}/withdraw/')
         self.assertEqual(
             [a for a in actions() if a.startswith('investment.')],
-            ['investment.create', 'investment.update', 'investment.delete'],
+            ['investment.create', 'investment.update', 'investment.withdrawn'],
         )
 
 

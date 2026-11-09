@@ -96,7 +96,7 @@ function RequestsTab({ investments, startups, cancelInvestment, navigate }) {
                 </div>
                 {inv.status === 'pending' ? (
                   <div className="app-row-actions">
-                    <button className="btn btn-outline btn-sm" onClick={() => cancelInvestment(inv.id)}>Cancel</button>
+                    <button className="btn btn-outline btn-sm" onClick={() => cancelInvestment(inv.id).catch((err) => alert(err.message))}>Withdraw</button>
                   </div>
                 ) : (
                   <span className={`status-pill ${inv.status === 'accepted' ? 'status-open' : 'status-closed'}`}>{inv.status}</span>

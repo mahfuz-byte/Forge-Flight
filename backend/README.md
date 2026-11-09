@@ -59,6 +59,17 @@ Every demo user seeded by `seed_demo` gets the password from `DEMO_PASSWORD`, or
 - **Admin APIs**: anything under `/api/admin/` must inherit `core.admin_api.AdminAPIMixin`; `core/test_access.py` fails otherwise. That test also fails when a new endpoint accepts anonymous writes or anonymous reads it hasn't been classified for.
 - **Django admin**: only super admins can change roles, staff/superuser flags and permissions, or edit accounts with those privileges.
 
+## Applications, investments and funding
+
+All state changes go through `startups/services.py` (one transaction each, rows locked):
+
+- `POST /api/investments/` validates: not your own startup, round is `open`, $100 to $10M, no more than the goal still open, one pending request per investor per startup.
+- `POST /api/investments/<id>/accept/` and `/reject/` (startup owner; optional `note`); `/withdraw/` (investor). Investments are never deleted.
+- `POST /api/applications/<id>/accept/` and `/decline/` (startup owner); `/withdraw/` (applicant). One live application per person per startup; the role is taken from the listing.
+- `PUT /api/startups/<slug>/collaboration/` saves the listing (`role`, `body`, `is_open`).
+- `Startup.raised` = `external_raised` (prior, off-platform funding, set by staff in Django admin) + accepted investments. Clients can't write it. Reaching the goal closes the round automatically.
+- Rule violations return 400, and state conflicts (already decided, duplicates) return 409, both with a human-readable `detail`.
+
 ## Notes
 
 - `venv/` and `.env` are gitignored — `requirements.txt` and `.env.example` are the source of truth for recreating them.

@@ -86,7 +86,7 @@ class OwnershipTests(APITestCase):
         self.assertEqual(self.client.patch(f'/api/applications/{app.id}/', {'role': 'x'}).status_code, 404)
         self.as_user(self.owner)
         self.assertEqual(len(self.client.get('/api/applications/').data), 1)
-        self.assertEqual(self.client.delete(f'/api/applications/{app.id}/').status_code, 403)
+        self.assertEqual(self.client.post(f'/api/applications/{app.id}/withdraw/').status_code, 403)
         self.as_user(self.other)
         self.assertEqual(self.client.patch(f'/api/applications/{app.id}/', {'role': 'Lead'}).status_code, 200)
 
@@ -96,13 +96,13 @@ class OwnershipTests(APITestCase):
         finance = User.objects.create_user('fin@example.com', PW, role=Role.FINANCE_ADMIN)
         self.as_user(stranger)
         self.assertEqual(self.client.get('/api/investments/').data, [])
-        self.assertEqual(self.client.delete(f'/api/investments/{inv.id}/').status_code, 404)
+        self.assertEqual(self.client.patch(f'/api/investments/{inv.id}/', {'amount': 1}).status_code, 404)
         self.as_user(finance)
         self.assertEqual(len(self.client.get('/api/investments/').data), 1)
         self.as_user(self.owner)
         self.assertEqual(self.client.patch(f'/api/investments/{inv.id}/', {'amount': 1}).status_code, 403)
         self.as_user(self.other)
-        self.assertEqual(self.client.delete(f'/api/investments/{inv.id}/').status_code, 204)
+        self.assertEqual(self.client.post(f'/api/investments/{inv.id}/withdraw/').status_code, 200)
 
     # -- messaging
     def test_messaging_permissions(self):

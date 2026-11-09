@@ -180,6 +180,8 @@ class Command(BaseCommand):
                     'status': data['status'],
                     'tags': data['tags'],
                     'goal': data['goal'],
+                    # Seeded progress is prior, off-platform funding; `raised` adds real investments on top.
+                    'external_raised': data['raised'],
                     'raised': data['raised'],
                     'deadline': data['deadline'],
                     'overview': data['overview'],

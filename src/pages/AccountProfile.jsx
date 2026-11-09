@@ -276,7 +276,7 @@ export default function AccountProfile() {
                             <span className="app-row-meta">{inv.time}</span>
                           </div>
                           <div className="app-row-actions">
-                            <button className="btn btn-outline btn-sm" onClick={() => cancelInvestment(inv.id)}>Cancel</button>
+                            <button className="btn btn-outline btn-sm" onClick={() => cancelInvestment(inv.id).catch((err) => alert(err.message))}>Withdraw</button>
                           </div>
                         </div>
                       );

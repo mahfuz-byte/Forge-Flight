@@ -63,9 +63,15 @@ function FundingPanel({ id, s, isOwner, navigate }) {
 function CollaborationPanel({ id, s, isOwner, navigate }) {
   const [open, setOpen] = useState(false);
   const [submitted, setSubmitted] = useState(false);
-  const { addApplication } = useApp();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  const { addApplication, applications, currentUser } = useApp();
+  const existing = applications.find(
+    (a) => a.startupId === id && a.applicantId === currentUser.id && (a.status === 'pending' || a.status === 'accepted'),
+  );
 
-  if (!s.collab) {
+  // An unpublished listing is only visible to its owner.
+  if (!s.collab || (!s.collab.isOpen && !isOwner)) {
     return (
       <div className="role-card">
         <p style={{ marginBottom: 0 }}>No open collaboration roles right now.</p>
@@ -81,16 +87,24 @@ function CollaborationPanel({ id, s, isOwner, navigate }) {
   async function handleSubmit(e) {
     e.preventDefault();
     const form = e.target;
-    await addApplication({
-      type: 'collaboration',
-      startupId: id,
-      role: s.collab.role,
-      name: form.name.value,
-      email: form.email.value,
-      link: form.link.value,
-      message: form.message.value,
-    });
-    setSubmitted(true);
+    setBusy(true);
+    setError('');
+    try {
+      await addApplication({
+        type: 'collaboration',
+        startupId: id,
+        role: s.collab.role,
+        name: form.name.value,
+        email: form.email.value,
+        link: form.link.value,
+        message: form.message.value,
+      });
+      setSubmitted(true); // only once the server has saved it
+    } catch (err) {
+      setError(err.message || 'Could not submit your application. Please try again.');
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
@@ -99,8 +113,12 @@ function CollaborationPanel({ id, s, isOwner, navigate }) {
       <p>{s.collab.body}</p>
       {isOwner ? (
         <p style={{ fontSize: 12.5, color: 'var(--text-faint)', marginBottom: 0 }}>
-          This is your listing — review applicants from your dashboard.
+          {s.collab.isOpen
+            ? 'This is your listing. Review applicants from your dashboard.'
+            : 'This listing is unpublished, so only you can see it. Publish it from your dashboard.'}
         </p>
+      ) : existing && !submitted ? (
+        <p className="apply-success"><Icon name="check" />You applied for this role · {existing.status}</p>
       ) : submitted ? (
         <p className="apply-success"><Icon name="check" />Application submitted — {s.founder.split(' ')[0]} will be in touch.</p>
       ) : (
@@ -111,7 +129,8 @@ function CollaborationPanel({ id, s, isOwner, navigate }) {
             <div className="field"><label htmlFor="ap-email">Email</label><input id="ap-email" name="email" type="email" placeholder="you@email.com" required /></div>
             <div className="field"><label htmlFor="ap-link">Portfolio / GitHub link</label><input id="ap-link" name="link" type="text" placeholder="https://" /></div>
             <div className="field"><label htmlFor="ap-msg">Message</label><textarea id="ap-msg" name="message" rows="3" placeholder="Why you're a fit for this role" /></div>
-            <button className="btn btn-accent btn-sm" type="submit">Submit application</button>
+            {error && <p className="modal-error" role="alert">{error}</p>}
+            <button className="btn btn-accent btn-sm" type="submit" disabled={busy}>{busy ? 'Submitting…' : 'Submit application'}</button>
           </form>
         </>
       )}

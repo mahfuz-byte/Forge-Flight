@@ -61,7 +61,7 @@ function transformStartup(s) {
     team: (s.team || []).map((t) => [t.name, t.title]),
     timeline: (s.timeline || []).map((t) => [t.date_label, t.title, t.description]),
     docs: (s.docs || []).map((d) => [d.name, d.size]),
-    collab: s.collab ? { role: s.collab.role, body: s.collab.body } : null,
+    collab: s.collab ? { role: s.collab.role, body: s.collab.body, isOpen: s.collab.is_open !== false } : null,
     updates: (s.updates || []).map((u) => u.text),
   };
 }
@@ -136,6 +136,7 @@ function transformInvestment(i) {
   return {
     id: i.id, startupId: i.startup, amount: i.amount,
     investorId: i.investor, time: timeAgo(i.created_at), status: i.status,
+    note: i.decision_note || '',
   };
 }
 
@@ -399,8 +400,15 @@ export function AppProvider({ children }) {
     setApplications((cur) => [transformApplication(created), ...cur]);
   }
 
+  // Founder decision on an application: status is 'accepted' or 'declined'.
   async function setApplicationStatus(id, status) {
-    const updated = await api.patch(`/applications/${id}/`, { status });
+    const action = status === 'accepted' ? 'accept' : 'decline';
+    const updated = await api.post(`/applications/${id}/${action}/`);
+    setApplications((cur) => cur.map((a) => (a.id === id ? transformApplication(updated) : a)));
+  }
+
+  async function withdrawApplication(id) {
+    const updated = await api.post(`/applications/${id}/withdraw/`);
     setApplications((cur) => cur.map((a) => (a.id === id ? transformApplication(updated) : a)));
   }
 
@@ -409,14 +417,38 @@ export function AppProvider({ children }) {
     setInvestments((cur) => [transformInvestment(created), ...cur]);
   }
 
+  // Investor withdraws a pending request. The record is kept (status "withdrawn").
   async function cancelInvestment(id) {
-    await api.delete(`/investments/${id}/`);
-    setInvestments((cur) => cur.filter((i) => i.id !== id));
+    const updated = await api.post(`/investments/${id}/withdraw/`);
+    setInvestments((cur) => cur.map((i) => (i.id === id ? transformInvestment(updated) : i)));
   }
 
-  async function setInvestmentStatus(id, status) {
-    const updated = await api.patch(`/investments/${id}/`, { status });
+  async function refreshStartup(slug) {
+    const s = await api.get(`/startups/${slug}/`);
+    setStartups((cur) => ({ ...cur, [s.slug]: transformStartup(s) }));
+  }
+
+  // Founder decision on an investment: status is 'accepted' or 'rejected'.
+  async function setInvestmentStatus(id, status, note = '') {
+    const action = status === 'accepted' ? 'accept' : 'reject';
+    const updated = await api.post(`/investments/${id}/${action}/`, { note });
     setInvestments((cur) => cur.map((i) => (i.id === id ? transformInvestment(updated) : i)));
+    // Accepting changes the startup's raised amount (and maybe its status).
+    if (status === 'accepted') await refreshStartup(updated.startup);
+  }
+
+  // Goal, round status and deadline label. `raised` is computed by the server.
+  async function updateFunding(slug, { goal, status, deadline }) {
+    const s = await api.patch(`/startups/${slug}/`, { goal: Number(goal) || 0, status, deadline });
+    setStartups((cur) => ({ ...cur, [s.slug]: transformStartup(s) }));
+  }
+
+  async function saveCollaboration(slug, { role, body, isOpen }) {
+    const collab = await api.put(`/startups/${slug}/collaboration/`, { role, body, is_open: isOpen });
+    setStartups((cur) => ({
+      ...cur,
+      [slug]: { ...cur[slug], collab: { role: collab.role, body: collab.body, isOpen: collab.is_open } },
+    }));
   }
 
   async function startConversation(startupSlug) {
@@ -530,8 +562,9 @@ export function AppProvider({ children }) {
         followed, toggleFollow,
         posts, addPost, toggleLikePost, deletePost, pinPost, editPost, loadMorePosts,
         comments, addComment,
-        applications, addApplication, setApplicationStatus,
+        applications, addApplication, setApplicationStatus, withdrawApplication,
         investments, addInvestment, cancelInvestment, setInvestmentStatus,
+        updateFunding, saveCollaboration,
         conversations, startConversation, sendMessage, markConversationRead,
         notifications, markNotificationRead, markAllNotificationsRead,
         postModalOpen, openCreatePost, closeCreatePost,

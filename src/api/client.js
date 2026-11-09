@@ -39,7 +39,7 @@ async function request(path, { method = 'GET', body, params } = {}) {
   const data = isJson ? await res.json() : null;
 
   if (!res.ok) {
-    const error = new Error(data?.detail || `Request failed: ${res.status}`);
+    const error = new Error(errorMessage(data, res.status));
     error.status = res.status;
     error.data = data;
     throw error;
@@ -47,9 +47,22 @@ async function request(path, { method = 'GET', body, params } = {}) {
   return data;
 }
 
+// The server's own explanation: `detail`, else the first field error.
+function errorMessage(data, status) {
+  const first = (v) => (Array.isArray(v) ? v[0] : v);
+  if (data?.detail) return String(first(data.detail));
+  if (data && typeof data === 'object') {
+    const [field, value] = Object.entries(data)[0] || [];
+    if (value) return field === 'non_field_errors' ? String(first(value)) : `${field}: ${first(value)}`;
+  }
+  if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+  return `Request failed (${status}). Please try again.`;
+}
+
 export const api = {
   get: (path, params) => request(path, { method: 'GET', params }),
   post: (path, body) => request(path, { method: 'POST', body: body ?? {} }),
   patch: (path, body) => request(path, { method: 'PATCH', body: body ?? {} }),
+  put: (path, body) => request(path, { method: 'PUT', body: body ?? {} }),
   delete: (path) => request(path, { method: 'DELETE' }),
 };

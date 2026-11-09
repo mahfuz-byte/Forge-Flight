@@ -21,81 +21,116 @@ const WEEK_VIEWS = [
   ['Mon', 38], ['Tue', 52], ['Wed', 44], ['Thu', 68], ['Fri', 61], ['Sat', 30], ['Sun', 47],
 ];
 
+// Runs an async action, shows "Saving…", then "Saved" or the server's error (BE-10).
 function SaveButton({ onSave, label = 'Save changes' }) {
-  const [saved, setSaved] = useState(false);
+  const [state, setState] = useState('idle');
+  const [error, setError] = useState('');
+  async function handleClick() {
+    setState('saving');
+    setError('');
+    try {
+      await onSave();
+      setState('saved');
+      setTimeout(() => setState('idle'), 1600);
+    } catch (err) {
+      setState('idle');
+      setError(err.message || 'Could not save. Please try again.');
+    }
+  }
   return (
-    <button
-      type="button"
-      className="btn btn-accent btn-sm"
-      onClick={() => { onSave?.(); setSaved(true); setTimeout(() => setSaved(false), 1600); }}
-    >
-      {saved ? <><Icon name="check" />Saved</> : label}
-    </button>
+    <>
+      <button type="button" className="btn btn-accent btn-sm" disabled={state === 'saving'} onClick={handleClick}>
+        {state === 'saved' ? <><Icon name="check" />Saved</> : state === 'saving' ? 'Saving…' : label}
+      </button>
+      {error && <p className="modal-error" role="alert" style={{ marginTop: 10 }}>{error}</p>}
+    </>
   );
 }
 
-function OverviewTab({ id, s, stats, navigate }) {
+// Accept/decline buttons that wait for the server and surface its error.
+function DecisionButtons({ onDecline, onAccept, declineLabel = 'Decline' }) {
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+  async function run(fn) {
+    setBusy(true);
+    setError('');
+    try {
+      await fn();
+    } catch (err) {
+      setError(err.message || 'Something went wrong. Please try again.');
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <div className="settings-card">
-      <div className="dash-header">
-        <LogoBadge id={id} initials={s.initials} size={54} />
-        <div>
-          <h4 style={{ marginBottom: 2 }}>{s.name}</h4>
-          <p className="settings-hint" style={{ marginBottom: 0 }}>{s.tagline}</p>
-        </div>
-        <button className="btn btn-outline btn-sm" style={{ marginLeft: 'auto' }} onClick={() => navigate(`/profile/${id}`)}>
-          View public profile
-        </button>
-      </div>
-      <div className="stat-grid dash-stats">
-        <div className="stat-tile"><b>2.4k</b><span>Followers</span></div>
-        <div className="stat-tile"><b>{fundingPct(s.raised, s.goal)}%</b><span>Funding Raised</span></div>
-        <div className="stat-tile"><b>{stats.collabCount}</b><span>Applications</span></div>
-        <div className="stat-tile"><b>{stats.investCount}</b><span>Investment Requests</span></div>
-      </div>
+    <div className="app-row-actions" style={{ flexWrap: 'wrap' }}>
+      <button className="btn btn-outline btn-sm" disabled={busy} onClick={() => run(onDecline)}>{declineLabel}</button>
+      <button className="btn btn-accent btn-sm" disabled={busy} onClick={() => run(onAccept)}>Accept</button>
+      {error && <p className="modal-error" role="alert" style={{ flexBasis: '100%', margin: '6px 0 0' }}>{error}</p>}
     </div>
   );
 }
 
-function ManageFundingTab({ s }) {
+const STATUS_CLASS = { accepted: 'status-open', pending: 'status-soon' };
+
+function StatusPill({ status }) {
+  return <span className={`status-pill ${STATUS_CLASS[status] || 'status-closed'}`}>{status}</span>;
+}
+
+function ManageFundingTab({ id, s, updateFunding }) {
   const [goal, setGoal] = useState(s.goal);
-  const [raised, setRaised] = useState(s.raised);
+  const [status, setStatus] = useState(s.status);
   const [deadline, setDeadline] = useState(s.deadline);
-  const pct = Math.min(100, Math.round((raised / goal) * 100) || 0);
+  const pct = Math.min(100, Math.round((s.raised / goal) * 100) || 0);
 
   return (
     <div className="settings-card">
       <h4>Manage funding</h4>
-      <div className="field"><label htmlFor="mf-goal">Funding goal ($)</label><input id="mf-goal" type="number" value={goal} onChange={(e) => setGoal(Number(e.target.value))} /></div>
-      <div className="field"><label htmlFor="mf-raised">Amount raised ($)</label><input id="mf-raised" type="number" value={raised} onChange={(e) => setRaised(Number(e.target.value))} /></div>
+      <div className="field"><label htmlFor="mf-goal">Funding goal ($)</label><input id="mf-goal" type="number" min="0" value={goal} onChange={(e) => setGoal(Number(e.target.value))} /></div>
+      <div className="field">
+        <label htmlFor="mf-status">Round status</label>
+        <select id="mf-status" value={status} onChange={(e) => setStatus(e.target.value)}>
+          <option value="soon">Opening soon</option>
+          <option value="open">Open: accepting investments</option>
+          <option value="closed">Closed</option>
+        </select>
+      </div>
       <div className="field"><label htmlFor="mf-deadline">Deadline label</label><input id="mf-deadline" type="text" value={deadline} onChange={(e) => setDeadline(e.target.value)} /></div>
       <div className="gauge" style={{ marginBottom: 8 }}><span style={{ width: `${pct}%` }} /></div>
-      <div className="funding-nums" style={{ marginBottom: 18 }}>
-        <span>Raised <b>{fmtMoney(raised)}</b></span>
+      <div className="funding-nums" style={{ marginBottom: 6 }}>
+        <span>Raised <b>{fmtMoney(s.raised)}</b></span>
         <span className="muted">Goal <b className="mono">{fmtMoney(goal)}</b></span>
         <span className="muted">{pct}%</span>
       </div>
-      <SaveButton />
+      <p className="settings-hint" style={{ marginBottom: 18 }}>
+        The raised amount updates automatically when you accept investment requests. The round closes on its own once the goal is reached.
+      </p>
+      <SaveButton onSave={() => updateFunding(id, { goal, status, deadline })} />
     </div>
   );
 }
 
-function ManageCollabTab({ id, s, applications, setApplicationStatus }) {
+function ManageCollabTab({ id, s, applications, setApplicationStatus, saveCollaboration }) {
   const [role, setRole] = useState(s.collab?.role || '');
   const [body, setBody] = useState(s.collab?.body || '');
+  const [isOpen, setIsOpen] = useState(s.collab ? s.collab.isOpen : true);
   const collabApps = applications.filter((a) => a.startupId === id && a.type === 'collaboration');
 
   return (
     <div className="settings-card">
       <h4>Manage collaboration listing</h4>
-      {!s.collab && <p className="settings-hint">You don't have an open role yet — fill this in and save to publish one.</p>}
+      {!s.collab && <p className="settings-hint">You don't have an open role yet. Fill this in and save to publish one.</p>}
       <div className="field"><label htmlFor="mc-role">Role title</label><input id="mc-role" type="text" placeholder="e.g. Flutter Developer" value={role} onChange={(e) => setRole(e.target.value)} /></div>
       <div className="field"><label htmlFor="mc-body">Description</label><textarea id="mc-body" rows="3" placeholder="What this collaborator will help build." value={body} onChange={(e) => setBody(e.target.value)} /></div>
-      <SaveButton />
+      <label className="field" style={{ display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}>
+        <input type="checkbox" checked={isOpen} onChange={(e) => setIsOpen(e.target.checked)} />
+        <span>Published: accepting applications</span>
+      </label>
+      <SaveButton onSave={() => saveCollaboration(id, { role, body, isOpen })} />
 
       <h4 style={{ marginTop: 26 }}>Applicants ({collabApps.length})</h4>
       {collabApps.length === 0 ? (
-        <p className="settings-hint">No applications yet — they'll show up here as candidates apply from your Startup Profile.</p>
+        <p className="settings-hint">No applications yet. They'll show up here as candidates apply from your Startup Profile.</p>
       ) : (
         <div className="app-list">
           {collabApps.map((a) => (
@@ -107,12 +142,12 @@ function ManageCollabTab({ id, s, applications, setApplicationStatus }) {
                 {a.link && <a className="app-row-link" href={a.link} target="_blank" rel="noreferrer">{a.link}</a>}
               </div>
               {a.status === 'pending' ? (
-                <div className="app-row-actions">
-                  <button className="btn btn-outline btn-sm" onClick={() => setApplicationStatus(a.id, 'declined')}>Decline</button>
-                  <button className="btn btn-accent btn-sm" onClick={() => setApplicationStatus(a.id, 'accepted')}>Accept</button>
-                </div>
+                <DecisionButtons
+                  onDecline={() => setApplicationStatus(a.id, 'declined')}
+                  onAccept={() => setApplicationStatus(a.id, 'accepted')}
+                />
               ) : (
-                <span className={`status-pill ${a.status === 'accepted' ? 'status-open' : 'status-closed'}`}>{a.status}</span>
+                <StatusPill status={a.status} />
               )}
             </div>
           ))}
@@ -122,7 +157,7 @@ function ManageCollabTab({ id, s, applications, setApplicationStatus }) {
   );
 }
 
-function ApplicationsTab({ id, applications, investments, setApplicationStatus, setInvestmentStatus, cancelInvestment }) {
+function ApplicationsTab({ id, applications, investments, setApplicationStatus, setInvestmentStatus }) {
   const [filter, setFilter] = useState('all');
   const collabApps = applications.filter((a) => a.startupId === id).map((a) => ({ ...a, kind: 'collaboration' }));
   const investApps = investments.filter((i) => i.startupId === id).map((i) => ({ ...i, kind: 'investment' }));
@@ -141,7 +176,7 @@ function ApplicationsTab({ id, applications, investments, setApplicationStatus, 
       ) : (
         <div className="app-list">
           {merged.map((a) => (
-            <div className="app-row" key={a.id}>
+            <div className="app-row" key={`${a.kind}-${a.id}`}>
               <div className="app-row-main">
                 {a.kind === 'collaboration' ? (
                   <>
@@ -153,26 +188,18 @@ function ApplicationsTab({ id, applications, investments, setApplicationStatus, 
                   <>
                     <b>Investment request · {fmtMoney(a.amount)}</b>
                     <span className="app-row-meta">{a.time}</span>
+                    {a.note && <p className="app-row-msg">{a.note}</p>}
                   </>
                 )}
               </div>
               {a.status === 'pending' ? (
-                <div className="app-row-actions">
-                  <button
-                    className="btn btn-outline btn-sm"
-                    onClick={() => (a.kind === 'collaboration' ? setApplicationStatus(a.id, 'declined') : cancelInvestment(a.id))}
-                  >
-                    Decline
-                  </button>
-                  <button
-                    className="btn btn-accent btn-sm"
-                    onClick={() => (a.kind === 'collaboration' ? setApplicationStatus(a.id, 'accepted') : setInvestmentStatus(a.id, 'accepted'))}
-                  >
-                    Accept
-                  </button>
-                </div>
+                <DecisionButtons
+                  declineLabel={a.kind === 'collaboration' ? 'Decline' : 'Reject'}
+                  onDecline={() => (a.kind === 'collaboration' ? setApplicationStatus(a.id, 'declined') : setInvestmentStatus(a.id, 'rejected'))}
+                  onAccept={() => (a.kind === 'collaboration' ? setApplicationStatus(a.id, 'accepted') : setInvestmentStatus(a.id, 'accepted'))}
+                />
               ) : (
-                <span className={`status-pill ${a.status === 'accepted' ? 'status-open' : 'status-closed'}`}>{a.status}</span>
+                <StatusPill status={a.status} />
               )}
             </div>
           ))}
@@ -210,7 +237,10 @@ export default function FounderDashboard() {
   const { id } = useParams();
   const [section, setSection] = useState('overview');
   const navigate = useNavigate();
-  const { currentUser, startups, applications, investments, setApplicationStatus, setInvestmentStatus, cancelInvestment } = useApp();
+  const {
+    currentUser, startups, applications, investments, setApplicationStatus, setInvestmentStatus,
+    updateFunding, saveCollaboration,
+  } = useApp();
   const s = startups[id];
   const isOwner = !!s && s.ownerId === currentUser.id;
 
@@ -256,9 +286,12 @@ export default function FounderDashboard() {
             </nav>
             <div className="settings-panel">
               {section === 'overview' && <OverviewTab id={id} s={s} stats={stats} navigate={navigate} />}
-              {section === 'funding' && <ManageFundingTab s={s} />}
+              {section === 'funding' && <ManageFundingTab id={id} s={s} updateFunding={updateFunding} />}
               {section === 'collab' && (
-                <ManageCollabTab id={id} s={s} applications={applications} setApplicationStatus={setApplicationStatus} />
+                <ManageCollabTab
+                  id={id} s={s} applications={applications}
+                  setApplicationStatus={setApplicationStatus} saveCollaboration={saveCollaboration}
+                />
               )}
               {section === 'applications' && (
                 <ApplicationsTab
@@ -267,7 +300,6 @@ export default function FounderDashboard() {
                   investments={investments}
                   setApplicationStatus={setApplicationStatus}
                   setInvestmentStatus={setInvestmentStatus}
-                  cancelInvestment={cancelInvestment}
                 />
               )}
               {section === 'analytics' && <AnalyticsTab />}
