@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { api } from '../api/client';
+import { api, getAuthToken, setAuthToken } from '../api/client';
 import { timeAgo } from '../utils/timeAgo';
 
 const AppContext = createContext(null);
@@ -177,10 +177,17 @@ export function AppProvider({ children }) {
     let cancelled = false;
 
     async function init() {
-      const [startupList, postList, me] = await Promise.all([
+      let me = null;
+      if (getAuthToken()) {
+        try {
+          me = await api.get('/auth/me/');
+        } catch {
+          setAuthToken(null);
+        }
+      }
+      const [startupList, postList] = await Promise.all([
         api.get('/startups/'),
         api.get('/posts/'),
-        api.get('/auth/me/').catch(() => null),
       ]);
       if (cancelled) return;
 
@@ -216,6 +223,7 @@ export function AppProvider({ children }) {
 
   async function login(email, password) {
     const user = await api.post('/auth/login/', { email, password });
+    setAuthToken(user.token);
     setCurrentUser(transformUser(user));
     setSignedIn(true);
     const [appList, investList] = await Promise.all([
@@ -234,6 +242,7 @@ export function AppProvider({ children }) {
     const user = await api.post('/auth/register/', {
       first_name: first, last_name: rest.join(' '), email: email.trim(), password,
     });
+    setAuthToken(user.token);
     setCurrentUser(transformUser(user));
     setSignedIn(true);
     setApplications([]);
@@ -245,6 +254,7 @@ export function AppProvider({ children }) {
 
   async function logOut() {
     await api.post('/auth/logout/').catch(() => {});
+    setAuthToken(null);
     setCurrentUser(GUEST_USER);
     setSignedIn(false);
     setApplications([]);
@@ -443,7 +453,7 @@ export function AppProvider({ children }) {
     if (!conversation) return;
     const unreadMessages = conversation.thread.filter((m) => m.from === 'them' && !m.read);
     if (unreadMessages.length === 0) return;
-    await Promise.all(unreadMessages.map((message) => api.patch(`/messages/${message.id}/`, { read: true })));
+    await api.post(`/conversations/${conversationId}/read/`);
     setConversations((cur) => cur.map((c) => {
       if (c.id !== conversationId) return c;
       return {

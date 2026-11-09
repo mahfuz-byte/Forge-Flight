@@ -104,6 +104,7 @@ Open **http://localhost:5173** in your browser.
 - Open a startup profile and check the Team / Timeline / Documents / Comments tabs — all real data from the database, not mocks.
 - Post a comment, then refresh the page — it's still there (confirms it's backend-persisted, not local React state).
 - Try **Create Startup** from `/account`, or **Register** a brand-new account from the login screen.
+- To test messaging in one browser, open two tabs. Sign in as `amara@healthsync.io` in the first and `daniel@medai.io` in the second (both use `password123`). In Daniel's tab, open HealthSync's profile, click **Message founder**, and send a message. Amara's Messages page shows it within three seconds and can reply. Each tab keeps its own account.
 
 ## Project structure
 
@@ -115,7 +116,7 @@ Forge & Flight/
 │   ├── accounts/   custom User model, auth endpoints
 │   ├── startups/   Startup + team/timeline/docs/comments/applications/investments
 │   ├── posts/      feed posts
-│   ├── messaging/  conversations (not yet wired into the frontend UI)
+│   ├── messaging/  persistent conversations and messages
 │   └── notifications/  per-user notifications (not yet wired into the frontend UI)
 └── docker-compose.yml (in backend/) — local PostgreSQL
 ```

@@ -44,14 +44,16 @@ Django + Django REST Framework API, backed by PostgreSQL.
 
 ## API shape
 
-All endpoints live under `/api/`. Auth is Django session auth (`/api/auth/login/`, `/api/auth/register/`, `/api/auth/logout/`, `/api/auth/me/`) — POST/PATCH requests need the `X-CSRFToken` header once a session cookie exists, same as any Django session-auth API. DRF's browsable API at any endpoint URL is the easiest way to explore this without curl.
+All endpoints live under `/api/`. `POST /api/auth/login/` and `POST /api/auth/register/` return a `token` alongside the user. Send `Authorization: Token <token>` for authenticated API calls. The frontend stores this token in `sessionStorage`, so two tabs can use different accounts. `POST /api/auth/logout/` revokes the current token. Run `python manage.py migrate` after updating to create DRF's token table.
 
 Key resources: `/api/startups/` (+ `/save/`, `/unsave/`, `/follow/`, `/unfollow/` actions, list vs detail serializers), `/api/comments/?startup=<slug>`, `/api/applications/?startup=<slug>&mine=1`, `/api/investments/`, `/api/posts/?startup=<slug>`, `/api/conversations/`, `/api/messages/?conversation=<id>`, `/api/notifications/`.
+
+To test messaging locally, sign in as a startup owner in one tab and a different account in another tab. The second account can choose the owner under Messages or click **Message founder** on the startup profile. Both participants see the same thread; the Messages page checks for new messages every three seconds. Both the Django backend and PostgreSQL must be running.
 
 Every demo user seeded by `seed_demo` has password `password123` (e.g. `amara@healthsync.io` owns HealthSync).
 
 ## Notes
 
 - `venv/` and `.env` are gitignored — `requirements.txt` and `.env.example` are the source of truth for recreating them.
-- The frontend (`../src`) does not call this API yet — it still runs entirely on in-memory `AppContext` state. Wiring it up is a separate step.
+- The frontend calls this API for accounts, startups, posts, investments, applications, and messages. Notifications remain mock data in the frontend.
 - `seed_demo` is idempotent (`update_or_create` on startup slug) — safe to re-run after pulling changes to the seed data.

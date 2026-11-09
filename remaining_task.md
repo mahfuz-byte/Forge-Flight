@@ -10,7 +10,7 @@ For context on *why* things are currently built the way they are, read [IMPLEMEN
 
 These are pages/buttons that already exist in the UI but don't do what they look like they do yet.
 
-- [ ] **Wire Messages (`src/pages/Messages.jsx`) to the real `messaging` backend app.** The backend already has working `Conversation`/`Message` models and endpoints (`/api/conversations/`, `/api/messages/`) — see IMPLEMENTATION.md §5.2 and §6.7. The page currently renders a hardcoded `INITIAL` array and never calls the API. Follow the same pattern as `AppContext.jsx`: fetch conversations on load, transform into whatever shape the UI needs, add `sendMessage()`/`startConversation()` functions.
+- [x] **Wire Messages (`src/pages/Messages.jsx`) to the real `messaging` backend app.** Conversations and messages persist through the API, with polling for new messages and a startup profile entry point.
 - [ ] **Wire Notifications (`src/pages/Notifications.jsx` and the Topbar's notification dropdown) to the real `notifications` backend app.** Same situation — `Notification` model and `/api/notifications/` endpoint exist and are unused.
 - [ ] **Actually create `Notification` rows when things happen.** Right now nothing populates the `Notification` table at all — there's no signal/hook that fires when someone comments on your startup, applies to your role, invests, etc. This needs to be built before wiring the frontend to it is even useful. Likely approach: Django signals (`post_save` on `StartupComment`, `Application`, `Investment`) that create a `Notification` for the relevant startup's owner.
 - [ ] **Make the Founder Dashboard's "Manage Funding" and "Manage Collaboration" forms actually save.** Currently (`src/pages/FounderDashboard.jsx`) they show a fake "Saved ✓" and never call the API — editing goal/raised/deadline/status or the collaboration role from the dashboard is UI theater. Needs: extend `StartupWriteSerializer` (`backend/startups/serializers.py`) to accept `raised`/`deadline`/`status`, add a `CollaborationRole` create/update endpoint (currently there's no dedicated endpoint for it — it's only ever set implicitly), and wire both into `AppContext.jsx`.
@@ -43,7 +43,7 @@ Everything here is currently configured for **local development only**. None of 
 
 - [ ] `DJANGO_SECRET_KEY` — `.env.example` ships a placeholder (`change-me`); real secret keys need to be generated per-environment and never committed (already gitignored, just needs a real deployment process).
 - [ ] `DEBUG=True` needs to become `False` in production, which then requires `ALLOWED_HOSTS` to be set correctly (currently just `localhost,127.0.0.1`) and a real static-file-serving story (Django doesn't serve static files itself with `DEBUG=False`).
-- [ ] `CORS_ALLOWED_ORIGINS` / `CSRF_TRUSTED_ORIGINS` currently only allow `localhost:5173` — need the real frontend domain added before deployment.
+- [ ] `CORS_ALLOWED_ORIGINS` currently only allows `localhost:5173` — add the real frontend domain before deployment.
 - [ ] Cookies should be `Secure` + proper `SameSite` policy once served over HTTPS (currently relies on Django's insecure-but-fine-for-http-dev defaults).
 - [ ] No rate limiting anywhere — `/api/auth/login/` in particular is brute-forceable as-is. DRF has throttle classes built in (`AnonRateThrottle`/`UserRateThrottle`) that would cover this cheaply.
 - [ ] No password reset / email verification flow. Registration just requires an email string with no verification that you own it.
@@ -74,8 +74,8 @@ Smaller things that would meaningfully improve the experience without being arch
 
 Not required for the app to "work," but worth considering as the project matures.
 
-- [ ] Move from session auth to token-based auth (JWT or DRF's TokenAuthentication) if a mobile app or third-party API consumer is ever planned — session cookies only really work cleanly for a first-party web frontend.
-- [ ] Real-time updates (WebSockets via Django Channels) for the feed and messaging, instead of "refresh to see new posts."
+- [x] Move from session auth to DRF token auth so separate browser tabs can use different accounts.
+- [ ] WebSocket updates (for lower-latency messaging and the feed). Messaging currently polls every three seconds.
 - [ ] Email notifications (funding milestones, new applications, new messages) — would build on the same signal-handler infrastructure suggested in §1 for in-app notifications.
 - [ ] A proper "boost" feature (paid or credit-based promotion of a post) if that's an actual product direction, not just a decorative button.
 - [ ] Search indexing (Postgres full-text search, or an external service like Meilisearch/Algolia) once the startup directory is large enough that substring matching in Explore isn't good enough.

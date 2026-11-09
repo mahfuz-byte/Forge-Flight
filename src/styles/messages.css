@@ -4,6 +4,13 @@
 .conv-list { border-right: 1px solid var(--border); overflow-y: auto; }
 .conv-list-head { padding: 18px 18px 10px; }
 .conv-list-head h3 { font-family: 'Big Shoulders Display'; font-size: 1.2rem; }
+.new-conversation { display: flex; gap: 6px; margin-top: 12px; }
+.new-conversation select { min-width: 0; flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 7px; background: var(--surface); color: var(--text); }
+.inbox-filter { width: 100%; margin-top: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 7px; background: var(--surface); color: var(--text); }
+.conv-startup { display: block; margin-top: 2px; font-size: 11px; color: var(--accent); }
+.messages-empty { padding: 16px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
+.messages-empty button { border: 0; background: none; color: var(--accent); cursor: pointer; font: inherit; }
+.messages-error { padding: 10px 16px; margin: 0; color: var(--accent); font-size: 12px; border-bottom: 1px solid var(--border); }
 .conv-row { display: flex; gap: 12px; padding: 12px 16px; width: 100%; text-align: left; border: none; background: none; border-bottom: 1px solid var(--border); }
 .conv-row:hover, .conv-row.active { background: var(--surface); }
 .conv-row-body { flex: 1; min-width: 0; }

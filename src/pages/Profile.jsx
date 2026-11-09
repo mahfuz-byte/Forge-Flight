@@ -125,7 +125,7 @@ export default function Profile() {
   const [commentDraft, setCommentDraft] = useState('');
   const navigate = useNavigate();
   const location = useLocation();
-  const { currentUser, startups, saved, toggleSaved, followed, toggleFollow, comments, addComment, startConversation } = useApp();
+  const { currentUser, signedIn, startups, saved, toggleSaved, followed, toggleFollow, comments, addComment, startConversation } = useApp();
   const s = startups[id] || startups.healthsync;
   const isOwner = s.ownerId === currentUser.id;
   const isSaved = saved.has(id);
@@ -145,6 +145,10 @@ export default function Profile() {
   }
 
   async function handleMessage() {
+    if (!signedIn) {
+      navigate('/login');
+      return;
+    }
     const convId = await startConversation(id);
     navigate(`/messages?id=${convId}`);
   }
@@ -166,6 +170,12 @@ export default function Profile() {
             <span className={`status-pill ${statusMeta(s.status).cls}`}>{statusMeta(s.status).label}</span>
             {!isOwner && (
               <>
+                <button
+                  className="btn btn-accent btn-sm"
+                  onClick={() => navigate(signedIn ? `/messages?startup=${encodeURIComponent(id)}` : '/login')}
+                >
+                  <Icon name="msg" />Message founder
+                </button>
                 <button
                   className="btn btn-outline btn-sm"
                   style={isSaved ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}
