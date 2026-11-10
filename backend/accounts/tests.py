@@ -3,7 +3,7 @@ from unittest import mock
 from django.core.cache import cache
 from django.db import IntegrityError, transaction
 from django.test import override_settings
-from rest_framework.test import APITestCase
+from rest_framework.test import APIClient, APITestCase
 
 from .google import GoogleAuthError, GoogleIdentity
 from .models import Role, SocialAccount, User
@@ -275,3 +275,25 @@ class GoogleAuthTests(AuthTestCase):
     def test_google_disabled_without_client_id(self):
         res = self.post()
         self.assertEqual(res.status_code, 400)
+
+
+class TabAuthenticationTests(APITestCase):
+    def test_two_tokens_keep_accounts_separate(self):
+        for name in ('Alice', 'Bob'):
+            user = User(email=f'{name.lower()}@example.com', first_name=name)
+            user.set_password('test-password-123')
+            user.save()
+
+        clients = []
+        for name in ('Alice', 'Bob'):
+            client = APIClient()
+            response = client.post('/api/auth/login/', {
+                'email': f'{name.lower()}@example.com', 'password': 'test-password-123',
+            })
+            self.assertEqual(response.status_code, 200)
+            client.credentials(HTTP_AUTHORIZATION=f"Token {response.data['token']}")
+            clients.append(client)
+
+        self.assertEqual(clients[0].get('/api/auth/me/').data['name'], 'Alice')
+        self.assertEqual(clients[1].get('/api/auth/me/').data['name'], 'Bob')
+        self.assertEqual(clients[0].get('/api/auth/me/').data['name'], 'Alice')

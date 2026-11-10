@@ -401,6 +401,12 @@ export default function Profile() {
             {!isOwner && (
               <>
                 <button
+                  className="btn btn-accent btn-sm"
+                  onClick={() => navigate(signedIn ? `/messages?startup=${encodeURIComponent(id)}` : '/login')}
+                >
+                  <Icon name="msg" />Message founder
+                </button>
+                <button
                   className="btn btn-outline btn-sm"
                   style={isSaved ? { borderColor: 'var(--accent)', color: 'var(--accent)' } : undefined}
                   onClick={() => guarded(() => toggleSaved(id))}

@@ -1,10 +1,20 @@
 export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+const TOKEN_KEY = 'forge-flight-auth-token';
 
 // Uploaded files come back as "/media/..." or absolute URLs; make them absolute.
 const API_ORIGIN = new URL(BASE_URL, window.location.href).origin;
 export function mediaUrl(path) {
   if (!path) return null;
   return /^https?:\/\//.test(path) ? path : `${API_ORIGIN}${path.startsWith('/') ? '' : '/'}${path}`;
+}
+
+export function getAuthToken() {
+  return window.sessionStorage.getItem(TOKEN_KEY);
+}
+
+export function setAuthToken(token) {
+  if (token) window.sessionStorage.setItem(TOKEN_KEY, token);
+  else window.sessionStorage.removeItem(TOKEN_KEY);
 }
 
 function getCookie(name) {
@@ -19,9 +29,6 @@ export async function ensureCsrfCookie() {
 }
 
 async function request(path, { method = 'GET', body, params } = {}) {
-  const needsCsrf = method !== 'GET' && method !== 'HEAD';
-  if (needsCsrf) await ensureCsrfCookie();
-
   let url = `${BASE_URL}${path}`;
   if (params) {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
@@ -31,11 +38,17 @@ async function request(path, { method = 'GET', body, params } = {}) {
 
   const headers = {};
   if (body !== undefined && !(body instanceof FormData)) headers['Content-Type'] = 'application/json';
-  if (needsCsrf) headers['X-CSRFToken'] = getCookie('csrftoken') || '';
+  const token = path === '/auth/login/' || path === '/auth/register/' ? null : getAuthToken();
+  if (token) {
+    headers.Authorization = `Token ${token}`;
+  } else if (method !== 'GET' && method !== 'HEAD') {
+    await ensureCsrfCookie();
+    headers['X-CSRFToken'] = getCookie('csrftoken') || '';
+  }
 
   const res = await fetch(url, {
     method,
-    credentials: 'include',
+    credentials: token ? 'omit' : 'include',
     headers,
     body: body instanceof FormData ? body : (body !== undefined ? JSON.stringify(body) : undefined),
   });

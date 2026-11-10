@@ -2,6 +2,7 @@ from django.contrib.auth import authenticate, login, logout, update_session_auth
 from django.db import IntegrityError, transaction
 from django.utils import timezone
 from rest_framework import permissions, status, viewsets
+from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view, permission_classes, throttle_classes
 from rest_framework.response import Response
 from rest_framework.settings import api_settings
@@ -49,8 +50,9 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
 
 
 def _start_session(request, user, status_code=200, **extra):
+    token, _ = Token.objects.get_or_create(user=user)
     login(request, user, backend='django.contrib.auth.backends.ModelBackend')
-    return Response({**UserSerializer(user).data, **extra}, status=status_code)
+    return Response({**UserSerializer(user).data, 'token': token.key, **extra}, status=status_code)
 
 
 @api_view(['POST'])
@@ -98,6 +100,8 @@ def login_view(request):
 @api_view(['POST'])
 @permission_classes([permissions.AllowAny])
 def logout_view(request):
+    if request.auth and hasattr(request.auth, 'delete'):
+        request.auth.delete()
     if request.user.is_authenticated:
         record('auth.logout', request.user)
     logout(request)  # flushes the server-side session and rotates the CSRF token

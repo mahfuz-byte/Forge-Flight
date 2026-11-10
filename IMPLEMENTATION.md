@@ -23,7 +23,7 @@ There is no "Founder account" vs. "Investor account" toggle. Whether you see fou
 | Frontend | React 19 + Vite + react-router-dom | Fast dev server, no framework opinions beyond routing |
 | Backend | Django 6 + Django REST Framework | Batteries-included: ORM, admin, auth, serialization |
 | Database | PostgreSQL 16 (via Docker) | Relational data (users own startups own posts/comments/...), plus native array fields for tags |
-| Auth | Django session cookies + CSRF token | Simplest thing that works for a same-origin-ish dev setup; not JWT |
+| Auth | DRF token authentication | The browser keeps a token per tab in `sessionStorage` |
 
 The frontend and backend are **two separate processes** that talk over HTTP. The frontend never touches the database directly — everything goes through the Django REST API.
 
@@ -39,7 +39,7 @@ Forge & Flight/
 │   ├── main.jsx                entry point
 │   ├── App.jsx                 <AppProvider> + <BrowserRouter> + route table
 │   ├── context/AppContext.jsx  ★ the most important file — see §6
-│   ├── api/client.js           fetch wrapper (auth cookies, CSRF)
+│   ├── api/client.js           fetch wrapper (per-tab auth token)
 │   ├── utils/timeAgo.js        "2h ago" style relative timestamps
 │   ├── pages/                  one file per route (Feed, Profile, Login, ...)
 │   ├── components/             shared UI (Topbar, FeedCard, modals, ...)
@@ -73,7 +73,7 @@ Example: viewing the HealthSync profile page.
 4. That data didn't come from `Profile.jsx` itself — `AppContext` fetched **every** startup, fully populated, once, when the app first loaded (see §6.1). `Profile.jsx` just reads from that already-loaded object.
 5. If you post a comment: `Profile.jsx` calls `addComment(id, text)` from context → that function does `POST http://localhost:8000/api/comments/` (Django, port 8000) → Django saves a `StartupComment` row in Postgres → the response comes back → `AppContext` updates its local `comments` state → React re-renders the Comments tab.
 
-The two servers are separate origins (`5173` vs `8000`), so every API call is cross-origin. That's why `django-cors-headers` and the CSRF cookie dance in `src/api/client.js` exist (see §7.3).
+The two servers are separate origins (`5173` vs `8000`), so every API call is cross-origin. `django-cors-headers` allows the frontend to send its authorization header to the API.
 
 ---
 
@@ -123,17 +123,17 @@ Everything else about a startup is a **separate model with a ForeignKey back to 
 
 **`posts.Post`** — one feed entry. `kind` is either `'update'` (tied to a startup) or `'event'` (the one platform-wide "Pitch Day" announcement, `startup` is null). Has its own `post_type` (free text like "Milestone Update", "Funding Announcement" — not a fixed enum, since the UI lets founders type anything), `title`, `text`, `tags`, optional `media` label.
 
-**`messaging.Conversation`** / **`messaging.Message`** and **`notifications.Notification`** exist as full Django apps with models/serializers/views, but **the frontend doesn't call them yet** — `Messages.jsx` and `Notifications.jsx` still show hardcoded mock arrays. See §9.
+**`messaging.Conversation`** / **`messaging.Message`** are wired to `Messages.jsx`. **`notifications.Notification`** exists in the backend, but `Notifications.jsx` still shows mock data. See §9.
 
 ### 5.3 API endpoints (all under `/api/`)
 
 | Method + path | What it does |
 |---|---|
 | `GET /health/` | liveness check |
-| `GET /csrf/` | sets the CSRF cookie (call before your first POST/PATCH/DELETE) |
-| `POST /auth/register/` | create account, logs you in |
-| `POST /auth/login/` | `{email, password}` → logs in |
-| `POST /auth/logout/` | ends the session |
+| `GET /csrf/` | legacy CSRF cookie endpoint; token-authenticated frontend does not need it |
+| `POST /auth/register/` | create account and return an auth token |
+| `POST /auth/login/` | `{email, password}` → return an auth token |
+| `POST /auth/logout/` | revoke the current token |
 | `GET` / `PATCH /auth/me/` | read/update your own profile |
 | `GET /users/` | list users (read-only) |
 | `GET /startups/`, `GET /startups/<slug>/` | **always returns the full nested shape** — team, timeline, docs, updates, comments, collab role all included, even in the list view (see §5.4 for why) |
@@ -146,7 +146,8 @@ Everything else about a startup is a **separate model with a ForeignKey back to 
 | `POST /applications/`, `PATCH /applications/<id>/` | apply / change status |
 | `GET /investments/?startup=<slug>&mine=1`, `POST`, `PATCH`, `DELETE` | same pattern for investment requests |
 | `GET /posts/?startup=<slug>`, `POST /posts/` | the feed |
-| `GET/POST /conversations/`, `GET/POST /messages/?conversation=<id>` | messaging (unused by frontend) |
+| `GET/POST /conversations/`, `GET/POST /messages/?conversation=<id>` | participant-only messaging used by the frontend |
+| `POST /conversations/<id>/read/` | mark received messages as read |
 | `GET/PATCH /notifications/` | notifications (unused by frontend) |
 
 The **Django admin** (`/admin/`) is also wired up for every model — useful for poking at data directly without writing curl commands. Create a superuser with `python manage.py createsuperuser`.
@@ -159,13 +160,9 @@ A more "correct" REST API would have a lightweight list endpoint (just name/tagl
 
 `StartupViewSet` uses **different serializers for reading vs. writing** (`StartupDetailSerializer` for GET, `StartupWriteSerializer` — just `name/tagline/tags/goal/overview` — for POST/PATCH, because you shouldn't be able to set `raised` or `owner` directly from the create form). DRF's default `create()`/`update()` behavior is to serialize the **response** with whatever serializer handled the **request** — which means a plain `ModelViewSet` would hand back only `name/tagline/tags/goal/overview` after creating a startup, missing `slug`, `owner`, `team`, etc. The frontend needs the full object back (it uses the response directly to update its local state). Fixed by overriding `create()`/`update()` to re-serialize the saved instance with `StartupDetailSerializer` before returning it — see `startups/views.py`. Keep this pattern in mind any time you split read/write serializers on a viewset.
 
-### 5.6 Auth: sessions, not tokens
+### 5.6 Auth: tab-scoped tokens
 
-Login (`POST /auth/login/`) calls Django's built-in `login()`, which sets a session cookie. Every subsequent request must include that cookie (`credentials: 'include'` on the frontend's `fetch` calls) for Django to know who you are.
-
-Django also requires a **CSRF token** on any unsafe method (POST/PATCH/DELETE) as a second line of defense — a value that must be sent both as a cookie and as a request header (`X-CSRFToken`), so a malicious third-party site can't forge a POST on your behalf just by having your cookie. `GET /api/csrf/` is a dedicated endpoint (`@ensure_csrf_cookie`) that guarantees the cookie is set; `src/api/client.js` calls it automatically the first time it needs to make a write request.
-
-Two settings make this work cross-origin in dev: `CORS_ALLOW_CREDENTIALS = True` (let the browser send/receive cookies to a different origin) and `CSRF_TRUSTED_ORIGINS` (tell Django that `http://localhost:5173` is allowed to submit CSRF-protected requests).
+Login and registration return a DRF authentication token. `src/api/client.js` stores it in `sessionStorage` and sends `Authorization: Token <token>` on API calls. This lets two tabs use different accounts in one browser. Logout revokes the token. Run `python manage.py migrate` to create the token table. The legacy CSRF endpoint remains, but the frontend does not use cookie authentication.
 
 ### 5.7 Seed data
 
@@ -249,8 +246,8 @@ One exception: `posts.js`'s `nextPostBatch()` / `MORE_POOL` is still live — it
 ### 6.5 `src/api/client.js`
 
 A thin `fetch` wrapper (`api.get/post/patch/delete`) that every context function funnels through. It handles:
-- `credentials: 'include'` on every request (send/receive the session cookie)
-- Auto-attaching `X-CSRFToken` from the cookie on unsafe methods, calling `GET /csrf/` first if the cookie isn't set yet
+- The tab's `Authorization: Token <token>` header on authenticated requests
+- No shared session cookie, so two tabs can stay signed in to different accounts
 - Parsing JSON and throwing an `Error` (with `.status` and `.data` attached) on non-2xx responses, so callers can `try/catch` and read `err.data` for field-level validation errors
 
 ### 6.6 Routing (`App.jsx`)
@@ -270,7 +267,8 @@ Plain `react-router-dom` route table, one page component per path. No route guar
 | `pages/FounderDashboard.jsx` | `/dashboard/:id` | manage a startup you own — guards on `ownerId !== currentUser.id` |
 | `pages/InvestorPortfolio.jsx` | `/portfolio` | mix of real data (`investments` from context) and hardcoded mock tabs |
 | `pages/Settings.jsx` | `/settings` | edit profile, log out |
-| `pages/Messages.jsx`, `pages/Notifications.jsx` | `/messages`, `/notifications` | **fully mock**, not connected to the backend apps of the same name |
+| `pages/Messages.jsx` | `/messages` | persistent API conversations; polls every three seconds |
+| `pages/Notifications.jsx` | `/notifications` | mock data, not connected to the backend |
 | `components/FeedCard.jsx` | — | renders one feed post, including owner-vs-investor-vs-guest controls |
 | `components/CreateStartupModal.jsx`, `CreatePostModal.jsx` | — | forms that call `createStartup()` / `addPost()` |
 | `components/InvestButton.jsx` | — | the reusable "Invest Now" widget used on both feed cards and profile pages |
@@ -301,7 +299,7 @@ Plain `react-router-dom` route table, one page component per path. No route guar
 
 These are deliberate, known gaps — not bugs to "discover":
 
-- **Messages and Notifications pages are 100% mock data**, even though the backend has fully-working `messaging` and `notifications` Django apps with real endpoints. Wiring the frontend up to them is unstarted.
+- **Notifications are mock data.** The backend `Notification` model exists but the page is not wired up.
 - **Founder Dashboard's funding/collaboration edit forms don't save anywhere.** Only *creating* a startup (name/tagline/tags/overview/goal) persists; editing `raised`, `deadline`, `status`, or the collaboration role afterward is local-only UI theater.
 - **Feed infinite scroll is simulated**, not paginated from the API — it appends from a small hardcoded pool (`data/posts.js`'s `MORE_POOL`) and stops after 3 rounds.
 - **No route guards.** Any page is reachable while logged out; components individually degrade gracefully (no owner controls, empty "my startups", etc.) rather than redirecting to `/login`.

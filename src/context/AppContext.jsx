@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { api, mediaUrl } from '../api/client';
+import { api, getAuthToken, mediaUrl, setAuthToken } from '../api/client';
 import { timeAgo } from '../utils/timeAgo';
 
 const AppContext = createContext(null);
@@ -233,10 +233,19 @@ export function AppProvider({ children }) {
     let cancelled = false;
 
     async function init() {
-      const [startupList, firstPage, me, siteSettings] = await Promise.all([
+      let me = null;
+      if (getAuthToken()) {
+        try {
+          me = await api.get('/auth/me/');
+        } catch {
+          setAuthToken(null);
+        }
+      } else {
+        me = await api.get('/auth/me/').catch(() => null);
+      }
+      const [startupList, firstPage, siteSettings] = await Promise.all([
         api.get('/startups/'),
         loadFeedPage(1).catch(() => ({ items: [], more: false })),
-        api.get('/auth/me/').catch(() => null),
         api.get('/site/').catch(() => null),
       ]);
       if (cancelled) return;
@@ -276,6 +285,7 @@ export function AppProvider({ children }) {
 
   // Shared by every way of signing in: load the user's private data.
   async function startSession(user) {
+    if (user.token) setAuthToken(user.token);
     setCurrentUser(transformUser(user));
     setSignedIn(true);
     const [appList, investList] = await Promise.all([
@@ -321,6 +331,7 @@ export function AppProvider({ children }) {
     const user = await api.post('/auth/register/', {
       first_name: first, last_name: rest.join(' '), email: email.trim(), password,
     });
+    setAuthToken(user.token);
     setCurrentUser(transformUser(user));
     setSignedIn(true);
     setApplications([]);
@@ -333,6 +344,7 @@ export function AppProvider({ children }) {
 
   async function logOut() {
     await api.post('/auth/logout/').catch(() => {});
+    setAuthToken(null);
     setCurrentUser(GUEST_USER);
     setSignedIn(false);
     setApplications([]);
@@ -625,7 +637,8 @@ export function AppProvider({ children }) {
   async function markConversationRead(conversationId) {
     const conversation = conversations.find((c) => c.id === conversationId);
     if (!conversation) return;
-    if (conversation.unread === 0) return;
+    const unreadCount = conversation.unread ?? conversation.thread.filter((m) => m.from === 'them' && !m.read).length;
+    if (unreadCount === 0) return;
     await api.post(`/conversations/${conversationId}/read/`);
     setConversations((cur) => cur.map((c) => {
       if (c.id !== conversationId) return c;
