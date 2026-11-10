@@ -21,6 +21,7 @@ CAPABILITIES = {
     'investments.view': {ADMIN, FIN},
     'investments.manage': {FIN},
     'collaborations.view': {ADMIN, SUP},
+    'collaborations.manage': {ADMIN},
     'content.moderate': {ADMIN, MOD},
     'reports.manage': {ADMIN, MOD},
     'notifications.send': {ADMIN, SUP},

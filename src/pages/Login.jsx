@@ -10,7 +10,7 @@ export default function Login() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const navigate = useNavigate();
-  const { login, registerUser, googleSignIn } = useApp();
+  const { login, registerUser, googleSignIn, site } = useApp();
 
   async function handleGoogleCredential(credential) {
     setError('');
@@ -74,7 +74,7 @@ export default function Login() {
             <button className={tab === 'register' ? 'active' : ''} onClick={() => { setTab('register'); setError(''); }}>Register</button>
           </div>
 
-          {googleSignInEnabled && (
+          {googleSignInEnabled && site.google_signin_enabled && (
             <>
               <GoogleSignInButton
                 text={tab === 'register' ? 'signup_with' : 'continue_with'}
@@ -94,7 +94,11 @@ export default function Login() {
             </form>
           )}
 
-          {tab === 'register' && (
+          {tab === 'register' && !site.registration_open && (
+            <p className="auth-foot" role="status">New sign-ups are paused right now. Please check back soon.</p>
+          )}
+
+          {tab === 'register' && site.registration_open && (
             <form onSubmit={handleRegister}>
               <div className="field"><label htmlFor="rg-name">Full name</label><input id="rg-name" name="name" type="text" placeholder="Jordan Wren" required /></div>
               <div className="field"><label htmlFor="rg-email">Email</label><input id="rg-email" name="email" type="email" placeholder="you@startup.com" required /></div>

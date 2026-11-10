@@ -47,7 +47,9 @@ export default function Explore() {
   );
 
   const list = useMemo(() => {
+    // Only public (approved) startups are explorable, even for staff and owners.
     return Object.entries(startups).filter(([id, s]) => {
+      if (s.reviewStatus !== 'approved') return false;
       if (filter === 'trending' && !TRENDING_IDS.has(id)) return false;
       if (filter === 'funding' && !(s.status === 'open' || s.status === 'soon')) return false;
       if (filter === 'collab' && !s.collab) return false;

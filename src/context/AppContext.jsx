@@ -51,6 +51,9 @@ function transformStartup(s) {
     verified: s.verified,
     founder: s.founder,
     founderAvatar: mediaUrl(s.founder_avatar),
+    reviewStatus: s.review_status || 'approved',
+    reviewNote: s.review_note || '',
+    featured: Boolean(s.featured),
     ownerId: s.owner,
     tagline: s.tagline,
     status: s.status,
@@ -169,6 +172,8 @@ export function AppProvider({ children }) {
   const [conversations, setConversations] = useState([]);
   const [notifications, setNotifications] = useState([]);
   const [postModalOpen, setPostModalOpen] = useState(false);
+  // Platform switches from /api/site/ (banner, sign-up and Google availability).
+  const [site, setSite] = useState({ registration_open: true, google_signin_enabled: true, site_banner: '' });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -228,12 +233,14 @@ export function AppProvider({ children }) {
     let cancelled = false;
 
     async function init() {
-      const [startupList, firstPage, me] = await Promise.all([
+      const [startupList, firstPage, me, siteSettings] = await Promise.all([
         api.get('/startups/'),
         loadFeedPage(1).catch(() => ({ items: [], more: false })),
         api.get('/auth/me/').catch(() => null),
+        api.get('/site/').catch(() => null),
       ]);
       if (cancelled) return;
+      if (siteSettings) setSite(siteSettings);
 
       const nextStartups = {};
       const nextComments = {};
@@ -277,8 +284,22 @@ export function AppProvider({ children }) {
     ]);
     setApplications(appList.map(transformApplication));
     setInvestments(investList.map(transformInvestment));
-    await Promise.all([loadInbox(user.id), refreshFeed()]);
+    await Promise.all([loadInbox(user.id), refreshFeed(), refreshStartups()]);
     return user;
+  }
+
+  // Reload startups for whoever is signed in: owners also see their own unapproved ones.
+  async function refreshStartups() {
+    const list = await api.get('/startups/').catch(() => null);
+    if (!list) return;
+    const nextStartups = {};
+    const nextComments = {};
+    list.forEach((st) => {
+      nextStartups[st.slug] = transformStartup(st);
+      nextComments[st.slug] = transformComments(st);
+    });
+    setStartups(nextStartups);
+    setComments(nextComments);
   }
 
   async function login(email, password) {
@@ -318,7 +339,7 @@ export function AppProvider({ children }) {
     setInvestments([]);
     setConversations([]);
     setNotifications([]);
-    await refreshFeed();
+    await Promise.all([refreshFeed(), refreshStartups()]);
   }
 
   // Keep messages and notifications in sync while signed in (FE-04 / FE-08):
@@ -680,7 +701,7 @@ export function AppProvider({ children }) {
       value={{
         currentUser, updateCurrentUser, registerUser, login, googleSignIn, logOut, signedIn, setSignedIn,
         changePassword, connectGoogle,
-        theme, setTheme, toggleTheme,
+        theme, setTheme, toggleTheme, site,
         startups, createStartup, updateStartup, deleteStartup, uploadDocument, removeDocument,
         myStartups, collaboratingIds,
         saved, toggleSaved,

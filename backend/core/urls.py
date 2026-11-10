@@ -5,4 +5,5 @@ from . import views
 urlpatterns = [
     path('health/', views.health_check, name='health-check'),
     path('csrf/', views.csrf, name='csrf'),
+    path('site/', views.site, name='site'),
 ]

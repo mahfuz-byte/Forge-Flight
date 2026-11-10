@@ -1,6 +1,6 @@
 import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import { AppProvider } from './context/AppContext';
+import { AppProvider, useApp } from './context/AppContext';
 import IconSprite from './components/IconSprite';
 import CreatePostModal from './components/CreatePostModal';
 import ScrollToTop from './components/ScrollToTop';
@@ -18,12 +18,20 @@ import Settings from './pages/Settings';
 // The admin panel is its own bundle: regular users never download it.
 const AdminApp = lazy(() => import('./admin/AdminApp'));
 
+// Platform-wide message set by super admins (System settings).
+function SiteBanner() {
+  const { site } = useApp();
+  if (!site.site_banner) return null;
+  return <div className="site-banner" role="status">{site.site_banner}</div>;
+}
+
 export default function App() {
   return (
     <AppProvider>
       <BrowserRouter>
         <IconSprite />
         <ScrollToTop />
+        <SiteBanner />
         <Routes>
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />

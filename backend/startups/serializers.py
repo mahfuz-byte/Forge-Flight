@@ -122,7 +122,7 @@ class StartupDetailSerializer(serializers.ModelSerializer):
         fields = [
             'slug', 'name', 'initials', 'verified', 'owner', 'founder', 'founder_avatar',
             'tagline', 'status', 'tags', 'goal', 'raised', 'funding_pct',
-            'deadline', 'overview', 'created_at', 'updated_at',
+            'deadline', 'overview', 'created_at', 'updated_at', 'review_status', 'review_note', 'featured',
             'collab', 'team', 'timeline', 'docs', 'updates', 'comments',
         ]
 

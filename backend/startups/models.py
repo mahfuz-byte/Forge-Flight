@@ -7,6 +7,15 @@ from core.uploads import RandomFilename, validate_startup_document
 
 
 class Startup(models.Model):
+    # Platform review (Phase 6): only approved startups are public.
+    REVIEW_PENDING, REVIEW_APPROVED, REVIEW_REJECTED, REVIEW_SUSPENDED = 'pending', 'approved', 'rejected', 'suspended'
+    REVIEW_CHOICES = [
+        (REVIEW_PENDING, 'Pending review'),
+        (REVIEW_APPROVED, 'Approved'),
+        (REVIEW_REJECTED, 'Rejected'),
+        (REVIEW_SUSPENDED, 'Suspended'),
+    ]
+
     STATUS_CHOICES = [
         ('open', 'Funding Open'),
         ('soon', 'Opening Soon'),
@@ -32,11 +41,25 @@ class Startup(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    # Startups created through the API start as pending when SiteSettings.require_startup_approval
+    # is on (see StartupViewSet.create); rows made by staff or scripts default to approved.
+    review_status = models.CharField(max_length=10, choices=REVIEW_CHOICES, default=REVIEW_APPROVED, db_index=True)
+    review_note = models.CharField(max_length=500, blank=True)
+    reviewed_at = models.DateTimeField(null=True, blank=True)
+    reviewed_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL, related_name='+',
+    )
+    featured = models.BooleanField(default=False, db_index=True)
+
     class Meta:
-        ordering = ['-created_at']
+        ordering = ['-featured', '-created_at']
 
     def __str__(self):
         return self.name
+
+    @property
+    def is_public(self):
+        return self.review_status == self.REVIEW_APPROVED
 
     def save(self, *args, **kwargs):
         if not self.slug:

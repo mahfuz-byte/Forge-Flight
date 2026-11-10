@@ -175,3 +175,10 @@
 .report-reason { display: flex; align-items: center; gap: 8px; cursor: pointer; }
 .report-pop textarea { width: 100%; font: inherit; font-size: 13px; padding: 8px; border: 1px solid var(--border); border-radius: 6px; background: var(--bg); color: var(--text); resize: vertical; }
 .report-actions { display: flex; justify-content: flex-end; gap: 8px; }
+
+/* Platform banner (System settings) and startup review notices. */
+.site-banner { background: var(--warning-soft); color: var(--text); border-bottom: 1px solid var(--border); padding: 8px 16px; font-size: 13.5px; text-align: center; }
+.review-notice { margin: 12px 0; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: var(--surface); font-size: 13.5px; }
+.review-notice b { display: block; margin-bottom: 2px; }
+.review-notice.tone-pending { border-color: var(--warning); background: var(--warning-soft); }
+.review-notice.tone-rejected, .review-notice.tone-suspended { border-color: var(--accent-strong); background: var(--accent-soft); }

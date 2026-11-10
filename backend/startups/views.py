@@ -48,15 +48,25 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
     owner_field = 'owner_id'
     staff_roles = (Role.ADMIN,)
 
+    def get_queryset(self):
+        # Pending, rejected and suspended startups are visible only to their
+        # owner and to reviewing staff (Phase 6, module 2).
+        return super().get_queryset().filter(services.visible_startups_q(self.request.user))
+
     def get_serializer_class(self):
         if self.action in ('create', 'update', 'partial_update'):
             return StartupWriteSerializer
         return StartupDetailSerializer
 
     def create(self, request, *args, **kwargs):
+        from core.models import SiteSettings
+
         write_serializer = self.get_serializer(data=request.data)
         write_serializer.is_valid(raise_exception=True)
-        instance = write_serializer.save()
+        needs_review = SiteSettings.current().require_startup_approval
+        instance = write_serializer.save(
+            review_status=Startup.REVIEW_PENDING if needs_review else Startup.REVIEW_APPROVED,
+        )
         return Response(StartupDetailSerializer(instance).data, status=201)
 
     def update(self, request, *args, **kwargs):
@@ -64,7 +74,11 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
         write_serializer = self.get_serializer(instance, data=request.data, partial=kwargs.get('partial', False))
         write_serializer.is_valid(raise_exception=True)
         self.audit_if_staff(instance, 'update', fields=sorted(write_serializer.validated_data))
+        resubmit = instance.review_status == Startup.REVIEW_REJECTED and instance.owner_id == request.user.id
         instance = write_serializer.save()
+        if resubmit:  # a founder fixing a rejected startup sends it back for review
+            Startup.objects.filter(pk=instance.pk).update(review_status=Startup.REVIEW_PENDING)
+            instance.review_status = Startup.REVIEW_PENDING
         return Response(StartupDetailSerializer(instance).data)
 
     def perform_destroy(self, instance):
@@ -155,11 +169,13 @@ class StartupCommentViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
     staff_roles = (Role.MODERATOR, Role.ADMIN)
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        qs = super().get_queryset().filter(services.visible_startups_q(self.request.user, 'startup__'))
         startup_slug = self.request.query_params.get('startup')
         return qs.filter(startup__slug=startup_slug) if startup_slug else qs
 
     def perform_create(self, serializer):
+        if not serializer.validated_data['startup'].is_public:
+            raise PermissionDenied("This startup isn't open for comments yet.")
         comment = serializer.save(author=self.request.user)
         notify(
             comment.startup.owner, f'{self.request.user.name} commented on {comment.startup.name}: "{comment.text[:80]}"',

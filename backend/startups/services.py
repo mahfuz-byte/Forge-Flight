@@ -34,6 +34,25 @@ def _lock_startup(startup_id):
     return Startup.objects.select_for_update().get(pk=startup_id)
 
 
+def visible_startups_q(user, prefix=''):
+    """Q filter for startups ``user`` may see: approved ones, their own, or all for reviewing staff."""
+    from django.db.models import Q
+
+    from adminpanel.capabilities import has_capability
+
+    if user.is_authenticated and has_capability(user, 'startups.view'):
+        return ~Q(pk__in=[])  # everything (an empty Q() would vanish when OR-ed)
+    q = Q(**{f'{prefix}review_status': Startup.REVIEW_APPROVED})
+    if user.is_authenticated:
+        q |= Q(**{f'{prefix}owner': user})
+    return q
+
+
+def _require_public(startup):
+    if startup.review_status != Startup.REVIEW_APPROVED:
+        raise BusinessRuleError("This startup isn't open to the public yet.")
+
+
 def can_manage_startup(user, startup):
     return startup.owner_id == user.id or user.has_role(Role.ADMIN)
 
@@ -89,6 +108,7 @@ def create_investment(investor, startup, amount):
         )
     with transaction.atomic():
         startup = _lock_startup(startup.pk)
+        _require_public(startup)
         if startup.status != 'open':
             raise BusinessRuleError('This startup is not accepting investments right now.')
         remaining = startup.goal - startup.raised
@@ -206,6 +226,7 @@ def create_application(applicant, startup, **fields):
     """BE-08: one live application per person, only to open listings, never to yourself."""
     if startup.owner_id == applicant.id:
         raise BusinessRuleError("You can't apply to your own startup.")
+    _require_public(startup)
     collab = CollaborationRole.objects.filter(startup=startup).first()
     if collab is None or not collab.is_open:
         raise BusinessRuleError('This startup has no open collaboration role right now.')

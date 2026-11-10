@@ -1,4 +1,4 @@
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
 
 // Uploaded files come back as "/media/..." or absolute URLs; make them absolute.
 const API_ORIGIN = new URL(BASE_URL, window.location.href).origin;

@@ -77,6 +77,9 @@ All state changes go through `startups/services.py` (one transaction each, rows 
 - `GET /api/admin/dashboard/` returns totals, 12-month growth series and recent activity. `GET /api/admin/activity/` returns the audit log, paginated (`page`, `page_size` up to 100) and filterable (`q`, `action`, `actor_role`, `since`, `until`).
 - New admin endpoints: inherit `core.admin_api.AdminAPIMixin`, set `admin_capability`, and get pagination and audit logging of writes for free.
 - `POST /api/reports/` lets members report a post, comment, startup or user (one open report per person per item). Moderators work through them in Phase 6.
+- Modules (Phase 6), each under `/api/admin/`: `users/` (suspend/activate), `startups/` (`review`: approve/reject/suspend/restore, `flags`: featured/verified), `investments/` (+ `summary/` funding monitor), `collaborations/` (+ `listings/`), `posts/` and `comments/` (DELETE with a `reason`), `reports/` (`resolve`/`dismiss`), `announcements/` (+ `preview/`), `analytics/` (+ `export/?dataset=` CSV), `staff/` + `roles/` (super admin), `activity/` (audit log), `settings/` (super admin).
+- **Startup review:** startups created through the API start as *pending* (hidden from everyone but the owner and reviewers) while *Review new startups* is on in System settings. Rejected startups go back to pending when the founder edits them. Only approved startups take investments, applications and comments.
+- **Site settings** (`core.models.SiteSettings`, cached 60s): registration open, Google sign-in on, startup review on, and a site-wide banner, exposed publicly at `GET /api/site/`.
 
 ## Notes
 

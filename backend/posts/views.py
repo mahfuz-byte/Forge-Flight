@@ -29,7 +29,14 @@ class PostViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
     pagination_class = PostPagination
 
     def get_queryset(self):
-        qs = super().get_queryset()
+        from django.db.models import Q
+
+        from startups.services import visible_startups_q
+
+        # Posts of startups that aren't public yet are hidden like the startup itself.
+        qs = super().get_queryset().filter(
+            Q(startup__isnull=True) | visible_startups_q(self.request.user, 'startup__'),
+        )
         params = self.request.query_params
         if params.get('startup'):
             qs = qs.filter(startup__slug=params['startup'])

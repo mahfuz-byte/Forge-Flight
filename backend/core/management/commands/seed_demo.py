@@ -182,6 +182,7 @@ class Command(BaseCommand):
                     'goal': data['goal'],
                     # Seeded progress is prior, off-platform funding; `raised` adds real investments on top.
                     'external_raised': data['raised'],
+                    'review_status': 'approved',
                     'raised': data['raised'],
                     'deadline': data['deadline'],
                     'overview': data['overview'],

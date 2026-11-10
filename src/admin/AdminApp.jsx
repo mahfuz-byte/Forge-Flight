@@ -1,19 +1,25 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Navigate, NavLink, Route, Routes, useNavigate } from 'react-router-dom';
 import { Icon } from '../components/IconSprite';
 import { useApp } from '../context/AppContext';
 import { adminApi } from './adminApi';
 import { ErrorState } from './components';
 import { ADMIN_NAV, visibleNav } from './nav';
+import { AdminContext, useAdmin } from './context';
 import AdminDashboard from './pages/AdminDashboard';
 import ActivityLog from './pages/ActivityLog';
+import Admins from './pages/Admins';
+import Analytics from './pages/Analytics';
+import Announcements from './pages/Announcements';
+import Collaborations from './pages/Collaborations';
+import Community from './pages/Community';
+import Investments from './pages/Investments';
+import Reports from './pages/Reports';
+import Startups from './pages/Startups';
+import SystemSettings from './pages/SystemSettings';
+import Users from './pages/Users';
 import '../styles/admin.css';
 
-const AdminContext = createContext(null);
-
-export function useAdmin() {
-  return useContext(AdminContext);
-}
 
 /** Shown when the server says this account isn't an admin. Says nothing more. */
 function NotAuthorized() {
@@ -94,8 +100,18 @@ export default function AdminApp() {
           <main className="admin-content">
             <Routes>
               <Route index element={<Guarded capability="dashboard.view"><AdminDashboard /></Guarded>} />
+              <Route path="users" element={<Guarded capability="users.view"><Users /></Guarded>} />
+              <Route path="startups" element={<Guarded capability="startups.view"><Startups /></Guarded>} />
+              <Route path="investments" element={<Guarded capability="investments.view"><Investments /></Guarded>} />
+              <Route path="collaborations" element={<Guarded capability="collaborations.view"><Collaborations /></Guarded>} />
+              <Route path="community" element={<Guarded capability="content.moderate"><Community /></Guarded>} />
+              <Route path="reports" element={<Guarded capability="reports.manage"><Reports /></Guarded>} />
+              <Route path="notifications" element={<Guarded capability="notifications.send"><Announcements /></Guarded>} />
+              <Route path="analytics" element={<Guarded capability="analytics.view"><Analytics /></Guarded>} />
+              <Route path="admins" element={<Guarded capability="admins.manage"><Admins /></Guarded>} />
               <Route path="activity" element={<Guarded capability="activity.view"><ActivityLog /></Guarded>} />
-              {/* Modules not built yet (Phase 6) and unknown paths go to the admin home. */}
+              <Route path="settings" element={<Guarded capability="settings.manage"><SystemSettings /></Guarded>} />
+              {/* Modules not built yet and unknown paths go to the admin home. */}
               {ADMIN_NAV.filter((n) => !n.ready).map((n) => (
                 <Route key={n.to} path={n.to.replace('/admin/', '')} element={<Navigate to={home} replace />} />
               ))}

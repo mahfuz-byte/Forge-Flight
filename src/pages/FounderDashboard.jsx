@@ -6,6 +6,7 @@ import LogoBadge from '../components/LogoBadge';
 import { Icon } from '../components/IconSprite';
 import { fmtMoney, fundingPct } from '../data/startups';
 import { useApp } from '../context/AppContext';
+import ReviewNotice from '../components/ReviewNotice';
 import '../styles/settings.css';
 import '../styles/dashboard.css';
 
@@ -346,6 +347,7 @@ export default function FounderDashboard() {
         <LeftNav />
         <main className="center-col settings-page">
           <h2 className="settings-title">Manage {s.name}</h2>
+          <ReviewNotice startup={s} />
           <div className="settings-shell">
             <nav className="settings-nav">
               {SECTIONS.map(([key, label]) => (

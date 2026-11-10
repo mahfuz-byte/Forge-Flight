@@ -8,6 +8,7 @@ from rest_framework.settings import api_settings
 from rest_framework.throttling import SimpleRateThrottle
 
 from audit.log import record
+from core.models import SiteSettings
 
 from . import throttling
 from .google import GoogleAuthError, verify_google_credential
@@ -56,6 +57,8 @@ def _start_session(request, user, status_code=200, **extra):
 @permission_classes([permissions.AllowAny])
 @throttle_classes([AuthThrottle])
 def register(request):
+    if not SiteSettings.current().registration_open:
+        return Response({'detail': 'New sign-ups are paused right now. Please try again later.'}, status=403)
     serializer = RegisterSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
     try:
@@ -159,6 +162,8 @@ def google_login(request):
       409      the matching account already has a *different* Google account linked
       400/403  invalid token, unverified Google email, or disabled account
     """
+    if not SiteSettings.current().google_signin_enabled:
+        return Response({'detail': 'Google sign-in is turned off right now. Use your email and password.'}, status=403)
     try:
         identity = verify_google_credential(request.data.get('credential'))
     except GoogleAuthError as exc:
@@ -208,6 +213,8 @@ def google_login(request):
         return _start_session(request, existing)
 
     # 4. New user → create a fully initialised local account.
+    if not SiteSettings.current().registration_open:
+        return Response({'detail': 'New sign-ups are paused right now. Please try again later.'}, status=403)
     with transaction.atomic():
         user = User.objects.create_user(
             email=email,

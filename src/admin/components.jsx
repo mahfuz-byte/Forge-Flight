@@ -158,3 +158,95 @@ export function BarChart({ title, months, values, format = (v) => v.toLocaleStri
     </figure>
   );
 }
+
+// ----------------------------------------------------------------- dialogs & layout
+
+/**
+ * Modal asking for a reason/note before an admin action. `onSubmit(text, extra)`
+ * may throw an AdminApiError; its message is shown inside the dialog.
+ */
+export function ReasonDialog({
+  title, description, label = 'Reason', placeholder, confirmLabel = 'Confirm', danger = false,
+  required = true, children, onSubmit, onClose,
+}) {
+  const [text, setText] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState('');
+
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === 'Escape' && !busy) onClose(); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [busy, onClose]);
+
+  async function submit(e) {
+    e.preventDefault();
+    if (required && !text.trim()) { setError('Please add a short reason. It is recorded.'); return; }
+    setBusy(true);
+    setError('');
+    try {
+      await onSubmit(text.trim());
+      onClose();
+    } catch (err) {
+      setError(err.message || 'That didn’t work.');
+      setBusy(false);
+    }
+  }
+
+  return (
+    <div className="admin-dialog-backdrop" onMouseDown={(e) => { if (e.target === e.currentTarget && !busy) onClose(); }}>
+      <form className="admin-dialog" role="dialog" aria-modal="true" aria-labelledby="admin-dialog-title" onSubmit={submit}>
+        <h2 id="admin-dialog-title">{title}</h2>
+        {description && <p className="admin-muted">{description}</p>}
+        {children}
+        <label className="admin-field">
+          <span>{label}{required ? '' : ' (optional)'}</span>
+          <textarea rows="3" maxLength={1000} placeholder={placeholder} value={text} onChange={(e) => setText(e.target.value)} autoFocus />
+        </label>
+        {error && <p className="admin-form-error" role="alert">{error}</p>}
+        <div className="admin-dialog-actions">
+          <button type="button" className="btn btn-outline btn-sm" onClick={onClose} disabled={busy}>Cancel</button>
+          <button type="submit" className={`btn btn-sm ${danger ? 'btn-danger' : 'btn-accent'}`} disabled={busy}>
+            {busy ? 'Working…' : confirmLabel}
+          </button>
+        </div>
+      </form>
+    </div>
+  );
+}
+
+export function Tabs({ tabs, value, onChange }) {
+  return (
+    <div className="admin-tabs" role="tablist">
+      {tabs.map(([key, label]) => (
+        <button key={key} type="button" role="tab" aria-selected={value === key} className={value === key ? 'active' : ''} onClick={() => onChange(key)}>
+          {label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+/** Small key/value list for detail panels. */
+export function DetailList({ items }) {
+  return (
+    <dl className="admin-detail-list">
+      {items.filter(Boolean).map(([k, v]) => (
+        <div key={k}><dt>{k}</dt><dd>{v ?? '—'}</dd></div>
+      ))}
+    </dl>
+  );
+}
+
+const PILL_TONES = {
+  approved: 'good', active: 'good', accepted: 'good', completed: 'good', resolved: 'good', open: 'warn',
+  pending: 'warn', rejected: 'bad', declined: 'bad', suspended: 'bad', dismissed: 'muted', withdrawn: 'muted', closed: 'muted',
+};
+
+export function Pill({ value, label }) {
+  return <span className={`admin-pill tone-${PILL_TONES[value] || 'muted'}`}>{label || value}</span>;
+}
+
+export function fmtDate(value) {
+  return value ? new Date(value).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) : '—';
+}

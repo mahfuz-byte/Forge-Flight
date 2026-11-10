@@ -8,6 +8,7 @@ import { LOGO_GRADIENTS, statusMeta, fmtMoney, fundingPct, initialsOf } from '..
 import { useApp } from '../context/AppContext';
 import { api, mediaUrl } from '../api/client';
 import Avatar from '../components/Avatar';
+import ReviewNotice from '../components/ReviewNotice';
 
 const TABS = [
   ['overview', 'Overview'],
@@ -386,6 +387,7 @@ export default function Profile() {
       <Topbar />
       <button className="back-btn" onClick={() => navigate('/feed')}><Icon name="back" />Back to feed</button>
 
+      {isOwner && <div style={{ padding: '0 16px' }}><ReviewNotice startup={s} /></div>}
       <div className="profile-cover" style={{ background: `linear-gradient(120deg, ${(LOGO_GRADIENTS[id] || 'linear-gradient(155deg,#403d39,#252422)').replace('linear-gradient(155deg,', '')}` }} />
       <div className="profile-head">
         <LogoBadge id={id} initials={s.initials} size={88} />

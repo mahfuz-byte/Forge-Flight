@@ -21,7 +21,7 @@ ANONYMOUS_WRITES = {
 # List endpoints anonymous visitors may read.
 PUBLIC_READS = {
     '/api/',  # DRF router's browsable index of endpoint URLs
-    '/api/health/', '/api/csrf/', '/api/startups/', '/api/posts/', '/api/comments/',
+    '/api/health/', '/api/csrf/', '/api/site/', '/api/startups/', '/api/posts/', '/api/comments/',
 }
 DENIED = (401, 403)
 
