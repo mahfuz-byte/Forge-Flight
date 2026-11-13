@@ -29,6 +29,7 @@ urlpatterns = [
     path('api/', include('notifications.urls')),
     path('api/', include('moderation.urls')),
     path('api/', include('adminpanel.urls')),
+    path('api/', include('statistics_app.urls')),
 ]
 
 if settings.DEBUG:

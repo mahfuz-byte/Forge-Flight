@@ -278,7 +278,7 @@ function StartupSettingsTab({ id, s, updateStartup, deleteStartup, navigate }) {
   );
 }
 
-function AnalyticsTab() {
+function AnalyticsTab({ id, navigate }) {
   const max = Math.max(...WEEK_VIEWS.map(([, v]) => v));
   return (
     <div className="settings-card">
@@ -290,13 +290,27 @@ function AnalyticsTab() {
         <div className="stat-tile"><b>2.4k</b><span>Followers</span></div>
       </div>
       <h5 className="dash-chart-label">Profile views this week</h5>
-      <div className="bar-chart">
+      <div className="bar-chart" style={{ marginBottom: 24 }}>
         {WEEK_VIEWS.map(([day, val]) => (
           <div className="bar-col" key={day}>
             <div className="bar-track"><div className="bar-fill" style={{ height: `${Math.round((val / max) * 100)}%` }} /></div>
             <span className="bar-label">{day}</span>
           </div>
         ))}
+      </div>
+
+      <div style={{ padding: 20, background: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)' }}>
+        <h5 style={{ margin: '0 0 6px', fontSize: 16 }}>AI Business Analytics (DeepSeek)</h5>
+        <p className="settings-hint" style={{ marginBottom: 14 }}>
+          Upload your sales records, customer cohorts, and operating costings to generate interactive financial charts, health scoring, and strategic recommendations.
+        </p>
+        <button
+          type="button"
+          className="btn btn-accent btn-sm"
+          onClick={() => navigate(`/statistics?startup=${id}`)}
+        >
+          <Icon name="chart" /> Open DeepSeek AI Statistics
+        </button>
       </div>
     </div>
   );
@@ -372,7 +386,7 @@ export default function FounderDashboard() {
                   setInvestmentStatus={setInvestmentStatus}
                 />
               )}
-              {section === 'analytics' && <AnalyticsTab />}
+              {section === 'analytics' && <AnalyticsTab id={id} navigate={navigate} />}
               {section === 'settings' && (
                 <StartupSettingsTab id={id} s={s} updateStartup={updateStartup} deleteStartup={deleteStartup} navigate={navigate} />
               )}

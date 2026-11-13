@@ -60,6 +60,7 @@ INSTALLED_APPS = [
     'audit',
     'moderation',
     'adminpanel',
+    'statistics_app',
 ]
 
 AUTH_USER_MODEL = 'accounts.User'
@@ -231,3 +232,9 @@ if not DEBUG:
 # Google sign-in (AUTH-02). The OAuth 2.0 *Web* client id from Google Cloud
 # Console; ID tokens whose audience isn't this id are rejected.
 GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default='')
+
+# AI Configuration (Ollama / DeepSeek)
+AI_PROVIDER = config('AI_PROVIDER', default='ollama')
+OLLAMA_HOST = config('OLLAMA_HOST', default='http://localhost:11434')
+OLLAMA_MODEL = config('OLLAMA_MODEL', default='deepseek-r1:1.5b')
+
