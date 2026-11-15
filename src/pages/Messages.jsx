@@ -21,7 +21,7 @@ export default function Messages() {
   const [activeId, setActiveId] = useState(null);
   const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
   const [draft, setDraft] = useState('');
-  const [startupChoice, setStartupChoice] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
   const [inboxFilter, setInboxFilter] = useState('all');
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
@@ -69,6 +69,7 @@ export default function Messages() {
     api.post('/conversations/', { startup: requestedStartup }).then((conversation) => {
       if (cancelled) return;
       setConversations((items) => [conversation, ...items.filter((c) => c.id !== conversation.id)]);
+      setInboxFilter('all');
       setActiveId(conversation.id);
       setMobileThreadOpen(true);
       setSearchParams({}, { replace: true });
@@ -85,6 +86,7 @@ export default function Messages() {
     if (!signedIn || !requestedId) return;
     const match = conversations.find((c) => String(c.id) === requestedId);
     if (match) {
+      setSearchTerm('');
       setInboxFilter('all');
       setActiveId(match.id);
       setMobileThreadOpen(true);
@@ -97,20 +99,29 @@ export default function Messages() {
     const bLast = b.messages.at(-1)?.created_at || b.created_at;
     return new Date(bLast) - new Date(aLast);
   }), [conversations]);
-
-  const visibleConversations = useMemo(() => ordered.filter((c) => (
+  const inboxConversations = useMemo(() => ordered.filter((c) => (
     inboxFilter === 'all'
       || (inboxFilter === 'personal' ? c.initiator === currentUser.id : (c.startup === inboxFilter || c.startup_slug === inboxFilter))
   )), [ordered, inboxFilter, currentUser.id]);
-
-  const active = visibleConversations.find((c) => c.id === activeId);
+  const query = searchTerm.trim().toLocaleLowerCase();
+  const visibleConversations = useMemo(() => inboxConversations.filter((c) => !query || [
+    c.startup_name, c.initiator === currentUser.id ? c.owner_name : c.initiator_name,
+  ].some((value) => value?.toLocaleLowerCase().includes(query))), [inboxConversations, query, currentUser.id]);
+  const active = inboxConversations.find((c) => c.id === activeId);
   const otherName = active && (active.initiator === currentUser.id ? active.owner_name : active.initiator_name);
-  const availableStartups = Object.entries(startups).filter(([, s]) => s.ownerId !== currentUser.id);
-
   useEffect(() => {
-    if (visibleConversations.some((c) => c.id === activeId)) return;
-    setActiveId(window.matchMedia('(max-width: 780px)').matches ? null : (visibleConversations[0]?.id ?? null));
-  }, [visibleConversations, activeId]);
+    if (inboxConversations.some((c) => c.id === activeId)) return;
+    setActiveId(window.matchMedia('(max-width: 780px)').matches ? null : (inboxConversations[0]?.id ?? null));
+  }, [inboxConversations, activeId]);
+  const matchingStartups = useMemo(() => {
+    if (!query || !signedIn) return [];
+    const existing = new Set(conversations.filter((c) => c.initiator === currentUser.id).map((c) => c.startup));
+    return Object.entries(startups).filter(([slug, startup]) => (
+      startup.ownerId !== currentUser.id
+      && !existing.has(slug)
+      && [startup.name, startup.founder].some((value) => value?.toLocaleLowerCase().includes(query))
+    ));
+  }, [query, signedIn, conversations, currentUser.id, startups]);
 
   useEffect(() => {
     if (!active || (window.matchMedia('(max-width: 780px)').matches && !mobileThreadOpen)
@@ -128,24 +139,19 @@ export default function Messages() {
     setActiveId(id);
     setMobileThreadOpen(true);
     setDraft('');
-    api.post(`/conversations/${id}/read/`).then(() => {
-      setConversations((items) => items.map((c) => c.id === id ? {
-        ...c,
-        messages: c.messages.map((m) => m.sender !== currentUser.id ? { ...m, read: true } : m),
-      } : c));
-    }).catch(() => {});
+    setSearchTerm('');
   }
 
-  async function startConversation(e) {
-    e.preventDefault();
-    if (!startupChoice || busy) return;
+  async function startConversation(startupSlug) {
+    if (!startupSlug || busy) return;
     setBusy(true);
     setError('');
     try {
-      const conversation = await api.post('/conversations/', { startup: startupChoice });
+      const conversation = await api.post('/conversations/', { startup: startupSlug });
       setConversations((items) => [conversation, ...items.filter((c) => c.id !== conversation.id)]);
+      setInboxFilter('all');
       setActiveId(conversation.id);
-      setStartupChoice('');
+      setSearchTerm('');
       setMobileThreadOpen(true);
     } catch (err) {
       setError(err.data?.startup?.[0] || err.data?.detail || 'Could not start the conversation.');
@@ -185,26 +191,31 @@ export default function Messages() {
               <div className="conv-list-head">
                 <h3>Messages</h3>
                 {signedIn && (
-                  <select className="inbox-filter input" style={{ padding: '6px 10px', fontSize: '13px' }} aria-label="Filter conversations" value={inboxFilter} onChange={(e) => { setInboxFilter(e.target.value); setActiveId(null); }}>
-                    <option value="all">All Messages</option>
-                    <option value="personal">Personal Inbox</option>
-                    {myStartups.map(([slug, s]) => <option key={slug} value={slug}>{s.name} Inbox</option>)}
-                  </select>
-                )}
-                {signedIn && (
-                  <form className="new-conversation" onSubmit={startConversation}>
-                    <select aria-label="Choose a startup to message" value={startupChoice} onChange={(e) => setStartupChoice(e.target.value)}>
-                      <option value="">Message a founder…</option>
-                      {availableStartups.map(([slug, s]) => <option key={slug} value={slug}>{s.founder} · {s.name}</option>)}
+                  <>
+                    <select className="inbox-filter input" aria-label="Filter conversations" value={inboxFilter} onChange={(e) => { setInboxFilter(e.target.value); setActiveId(null); }}>
+                      <option value="all">All Messages</option>
+                      <option value="personal">Personal Inbox</option>
+                      {myStartups.map(([slug, s]) => <option key={slug} value={slug}>{s.name} Inbox</option>)}
                     </select>
-                    <button className="btn btn-accent btn-sm" type="submit" disabled={!startupChoice || busy}>Start</button>
-                  </form>
+                  <div className="message-search">
+                    <Icon name="search" />
+                    <input
+                      type="search"
+                      aria-label="Search companies or people"
+                      placeholder="Search companies or people"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                  </>
                 )}
               </div>
               {error && <p className="messages-error" role="alert">{error}</p>}
               {!signedIn && <p className="messages-empty">Log in to see your conversations. <button onClick={() => navigate('/login')}>Log in</button></p>}
               {signedIn && loading && <p className="messages-empty">Loading conversations…</p>}
-              {signedIn && !loading && visibleConversations.length === 0 && <p className="messages-empty">No conversations here yet. Choose a founder above or open a startup profile to start one.</p>}
+              {signedIn && !loading && !query && visibleConversations.length === 0 && <p className="messages-empty">No conversations yet. Search for a company or founder to start one.</p>}
+              {signedIn && !loading && query && visibleConversations.length === 0 && matchingStartups.length === 0 && <p className="messages-empty">No matching companies or people found.</p>}
+              {query && visibleConversations.length > 0 && <div className="message-result-label">Conversations</div>}
               {visibleConversations.map((c) => {
                 const last = c.messages.at(-1);
                 const isOwner = c.initiator !== currentUser.id;
@@ -226,6 +237,17 @@ export default function Messages() {
                   </button>
                 );
               })}
+              {matchingStartups.length > 0 && (
+                <div className="message-search-results">
+                  <div className="message-result-label">Start a conversation</div>
+                  {matchingStartups.map(([slug, startup]) => (
+                    <button key={slug} className="message-start-row" type="button" disabled={busy} onClick={() => startConversation(slug)}>
+                      <LogoBadge id={slug} initials={startup.initials} size={40} />
+                      <span className="message-start-details"><b>{startup.name}</b><small>{startup.founder}</small></span>
+                    </button>
+                  ))}
+                </div>
+              )}
             </aside>
 
             <section className="thread-panel">

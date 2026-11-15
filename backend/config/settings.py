@@ -133,6 +133,9 @@ DATABASES = {
     )
 }
 DATABASES['default']['CONN_HEALTH_CHECKS'] = True
+_db_sslmode = config('DB_SSLMODE', default='')
+if _db_sslmode:
+    DATABASES['default'].setdefault('OPTIONS', {})['sslmode'] = _db_sslmode
 
 
 # Password validation
@@ -180,6 +183,31 @@ STORAGES = {
 MEDIA_URL = 'media/'
 MEDIA_ROOT = Path(config('DJANGO_MEDIA_ROOT', default=str(BASE_DIR / 'media')))
 SERVE_MEDIA = config('DJANGO_SERVE_MEDIA', default=False, cast=bool)
+
+# Optional Supabase Storage S3 endpoint. Keep credentials on the server only.
+SUPABASE_S3_ENDPOINT = config('SUPABASE_S3_ENDPOINT', default='')
+if SUPABASE_S3_ENDPOINT:
+    _s3_access_key = config('SUPABASE_S3_ACCESS_KEY', default='')
+    _s3_secret_key = config('SUPABASE_S3_SECRET_KEY', default='')
+    _s3_bucket = config('SUPABASE_S3_BUCKET', default='')
+    _s3_region = config('SUPABASE_S3_REGION', default='')
+    if not all((_s3_access_key, _s3_secret_key, _s3_bucket, _s3_region)):
+        raise ImproperlyConfigured('Complete the SUPABASE_S3_* settings before using cloud uploads.')
+    STORAGES['default'] = {
+        'BACKEND': 'storages.backends.s3.S3Storage',
+        'OPTIONS': {
+            'access_key': _s3_access_key,
+            'secret_key': _s3_secret_key,
+            'bucket_name': _s3_bucket,
+            'endpoint_url': SUPABASE_S3_ENDPOINT,
+            'region_name': _s3_region,
+            'addressing_style': 'path',
+            'signature_version': 's3v4',
+            'querystring_auth': True,
+            'default_acl': None,
+            'file_overwrite': False,
+        },
+    }
 
 # Uploads (SEC-06). Per-type allowlists and size caps live in core/uploads.py.
 # Files over this size are streamed to a temp file instead of held in memory.
@@ -253,4 +281,5 @@ GOOGLE_OAUTH_CLIENT_ID = config('GOOGLE_OAUTH_CLIENT_ID', default='')
 AI_PROVIDER = config('AI_PROVIDER', default='ollama')
 OLLAMA_HOST = config('OLLAMA_HOST', default='http://localhost:11434')
 OLLAMA_MODEL = config('OLLAMA_MODEL', default='deepseek-r1:1.5b')
+OLLAMA_BRIDGE_TOKEN = config('OLLAMA_BRIDGE_TOKEN', default='')
 

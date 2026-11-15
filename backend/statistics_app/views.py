@@ -78,8 +78,8 @@ class StatisticsViewSet(viewsets.ModelViewSet):
 
         # Process and calculate baseline metrics
         try:
-            file_path = report.file.path
-            metrics = process_uploaded_file(file_path)
+            with report.file.open('rb') as uploaded:
+                metrics = process_uploaded_file(uploaded, filename=orig_name)
             report.raw_summary = metrics
             report.save(update_fields=['raw_summary'])
         except Exception as e:

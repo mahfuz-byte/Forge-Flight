@@ -37,7 +37,8 @@ backend/media/
 # Local scratch files (may contain session cookies)
 cookies.txt
 testfile.txt
-backend/media/statistics_files/
+backend/deployment-data.json
+.vercel/
 
 # Understand-Anything knowledge graph
 .ua/

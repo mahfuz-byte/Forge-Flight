@@ -76,6 +76,7 @@ function errorMessage(data, status) {
     if (value) return field === 'non_field_errors' ? String(first(value)) : `${field}: ${first(value)}`;
   }
   if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+  if (status === 413) return 'For this online demo, uploads must be under 4 MB.';
   return `Request failed (${status}). Please try again.`;
 }
 

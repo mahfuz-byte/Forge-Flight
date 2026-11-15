@@ -51,12 +51,12 @@ Key resources: `/api/startups/` (+ `/save/`, `/unsave/`, `/follow/`, `/unfollow/
 
 Every demo user seeded by `seed_demo` gets the password from `DEMO_PASSWORD`, or defaults to `password123` (e.g. `amara@healthsync.io` owns HealthSync).
 
-To test messaging locally, sign in as a startup owner in one tab and a different account in another tab. The second account can choose the owner under Messages or click **Message founder** on the startup profile. Both participants see the same thread; the Messages page checks for new messages every three seconds. Both the Django backend and PostgreSQL must be running.
+To test messaging locally, sign in as a startup owner in one tab and a different account in another tab. The second account can search for the company or founder under Messages, or click **Message founder** on the startup profile. Use the inbox filter to view all messages, personal conversations, or a startup's inbox. Both participants see the same thread; the Messages page checks for new messages every three seconds. Both the Django backend and PostgreSQL must be running.
 
 ## Security rules worth knowing
 
 - **Uploads** (`core/uploads.py`): every file field has an allowlist of extensions, a check that the file's real bytes match the extension, and a size cap (avatar 5 MB, resume 10 MB, startup document 20 MB, post attachment 50 MB). HTML, SVG, scripts, executables, archives and macro-enabled Office files are rejected. Files are stored under random names.
-- **Serving uploads in production**: Django only serves `/media/` when `DEBUG=True`. In production serve it from the web server or object storage with `X-Content-Type-Options: nosniff`, and preferably from a separate domain, so an uploaded file can never run as part of the app.
+- **Serving uploads in production**: The Render deployment streams files from its persistent disk when `DJANGO_SERVE_MEDIA=True`. Optional Supabase Storage uses a private bucket with signed URLs; see [DEPLOYMENT.md](../DEPLOYMENT.md). Keep `X-Content-Type-Options: nosniff` for API responses.
 - **Audit log** (`audit/log.py`): call `record('thing.happened', target, **details)` for any new sensitive operation. Never put passwords, tokens or file contents in the details.
 - **Admin APIs**: anything under `/api/admin/` must inherit `core.admin_api.AdminAPIMixin`; `core/test_access.py` fails otherwise. That test also fails when a new endpoint accepts anonymous writes or anonymous reads it hasn't been classified for.
 - **Django admin**: only super admins can change roles, staff/superuser flags and permissions, or edit accounts with those privileges.

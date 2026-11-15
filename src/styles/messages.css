@@ -4,9 +4,19 @@
 .conv-list { border-right: 1px solid var(--border); overflow-y: auto; }
 .conv-list-head { padding: 18px 18px 10px; }
 .conv-list-head h3 { font-family: 'Big Shoulders Display'; font-size: 1.2rem; }
-.new-conversation { display: flex; gap: 6px; margin-top: 12px; }
-.new-conversation select { min-width: 0; flex: 1; border: 1px solid var(--border); border-radius: 6px; padding: 7px; background: var(--surface); color: var(--text); }
-.inbox-filter { width: 100%; margin-top: 12px; border: 1px solid var(--border); border-radius: 6px; padding: 7px; background: var(--surface); color: var(--text); }
+.inbox-filter { width: 100%; margin-top: 12px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface); color: var(--text); font-size: 13px; }
+.message-search { display: flex; align-items: center; gap: 8px; margin-top: 12px; padding: 0 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); color: var(--text-muted); }
+.message-search:focus-within { border-color: var(--accent); }
+.message-search input { min-width: 0; width: 100%; padding: 9px 0; border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; font-size: 13px; }
+.message-search input::placeholder { color: var(--text-faint); }
+.message-result-label { padding: 12px 16px 6px; color: var(--text-faint); font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; }
+.message-start-row { display: flex; align-items: center; gap: 12px; width: 100%; padding: 12px 16px; border: 0; border-bottom: 1px solid var(--border); background: none; text-align: left; cursor: pointer; }
+.message-start-row:hover { background: var(--surface); }
+.message-start-row:disabled { opacity: .55; cursor: wait; }
+.message-start-details { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.message-start-details b, .message-start-details small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.message-start-details b { color: var(--text); font-size: 13px; }
+.message-start-details small { color: var(--text-muted); font-size: 12px; }
 .conv-startup { display: block; margin-top: 2px; font-size: 11px; color: var(--accent); }
 .messages-empty { padding: 16px; color: var(--text-muted); font-size: 13px; line-height: 1.5; }
 .messages-empty button { border: 0; background: none; color: var(--accent); cursor: pointer; font: inherit; }
