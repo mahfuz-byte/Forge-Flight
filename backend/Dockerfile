@@ -1,0 +1,14 @@
+FROM python:3.13.7-slim
+
+ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY . .
+RUN DJANGO_SECRET_KEY=build-only-static-collection python manage.py collectstatic --noinput \
+    && useradd --create-home app \
+    && mkdir -p /app/media \
+    && chown -R app:app /app
+USER app
+EXPOSE 10000
+CMD ["sh", "-c", "python manage.py migrate --noinput && exec gunicorn config.wsgi:application --bind 0.0.0.0:${PORT:-10000} --workers 1 --threads 4 --timeout 120"]

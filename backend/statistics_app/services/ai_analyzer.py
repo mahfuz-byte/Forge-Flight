@@ -98,6 +98,12 @@ def analyze_with_deepseek(raw_summary, startup_name, startup_tagline='', startup
     Calls local Ollama running DeepSeek-R1 (or configured model) to generate
     deep business reasoning and interactive chart analytics.
     """
+    if getattr(settings, 'AI_PROVIDER', 'ollama') != 'ollama':
+        analysis = generate_fallback_analysis(raw_summary, startup_name)
+        analysis['engine'] = 'built-in-analysis'
+        analysis['notice'] = 'Analyzed using the built-in engine.'
+        return analysis
+
     model_name = getattr(settings, 'OLLAMA_MODEL', 'deepseek-r1:8b')
     host = getattr(settings, 'OLLAMA_HOST', 'http://localhost:11434')
 
