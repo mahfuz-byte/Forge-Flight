@@ -1,5 +1,15 @@
 # Forge & Flight
 
+## Production deployment
+
+1. Create a Supabase PostgreSQL project. Copy its **session pooler** connection URI (port 5432). Keep the password in Render's `DATABASE_URL` secret; do not add it to Git.
+2. Deploy the repository's `render.yaml` as a Render Blueprint. It uses a Starter web service and a 1 GB persistent disk for uploads. Render generates `DJANGO_SECRET_KEY`, collects static files, and applies the existing Django migrations before release.
+3. Import this repository into Vercel as a Vite project (repository root, `npm run build`, output `dist`). Set `VITE_API_URL=https://<render-host>/api` for Production, then deploy.
+4. Set `DJANGO_CORS_ALLOWED_ORIGINS` and `DJANGO_CSRF_TRUSTED_ORIGINS` on Render to the exact production Vercel origin, such as `https://<vercel-host>`, then redeploy the backend. Add custom domains to these settings if used.
+5. Verify `/api/health/` and `/api/site/` on Render, open the Vercel site, and test registration and an upload. Do not run `seed_demo` in production; it creates accounts with known passwords.
+
+Google sign-in is optional. If used, set the same OAuth client ID in Render's `GOOGLE_OAUTH_CLIENT_ID` and Vercel's `VITE_GOOGLE_CLIENT_ID`, and authorize the Vercel origin in Google Cloud.
+
 A startup-incubator platform connecting founders and investors through a LinkedIn-style feed. Founders post progress updates (milestones, funding rounds, collaboration openings) and investors discover and back them while a funding window is open.
 
 **Stack:** React 19 + Vite (frontend) · Django + Django REST Framework (backend) · PostgreSQL (database).

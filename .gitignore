@@ -19,6 +19,8 @@ backend/__pycache__
 backend/**/__pycache__
 backend/*.sqlite3
 backend/.env
+backend/staticfiles/
+backend/media/
 *.pyc
 
 # Editor directories and files
