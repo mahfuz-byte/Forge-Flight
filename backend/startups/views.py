@@ -59,13 +59,10 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
         return StartupDetailSerializer
 
     def create(self, request, *args, **kwargs):
-        from core.models import SiteSettings
-
         write_serializer = self.get_serializer(data=request.data)
         write_serializer.is_valid(raise_exception=True)
-        needs_review = SiteSettings.current().require_startup_approval
         instance = write_serializer.save(
-            review_status=Startup.REVIEW_PENDING if needs_review else Startup.REVIEW_APPROVED,
+            review_status=Startup.REVIEW_APPROVED,
         )
         return Response(StartupDetailSerializer(instance).data, status=201)
 
@@ -74,11 +71,7 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
         write_serializer = self.get_serializer(instance, data=request.data, partial=kwargs.get('partial', False))
         write_serializer.is_valid(raise_exception=True)
         self.audit_if_staff(instance, 'update', fields=sorted(write_serializer.validated_data))
-        resubmit = instance.review_status == Startup.REVIEW_REJECTED and instance.owner_id == request.user.id
-        instance = write_serializer.save()
-        if resubmit:  # a founder fixing a rejected startup sends it back for review
-            Startup.objects.filter(pk=instance.pk).update(review_status=Startup.REVIEW_PENDING)
-            instance.review_status = Startup.REVIEW_PENDING
+        instance = write_serializer.save(review_status=Startup.REVIEW_APPROVED)
         return Response(StartupDetailSerializer(instance).data)
 
     def perform_destroy(self, instance):

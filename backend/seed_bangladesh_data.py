@@ -7,6 +7,7 @@ os.environ['DJANGO_SETTINGS_MODULE'] = 'config.settings'
 django.setup()
 
 from django.utils import timezone
+from core.models import SiteSettings
 from accounts.models import User, Role
 from startups.models import (
     Startup, CollaborationRole, TeamMember, TimelineEvent, Document, 
@@ -296,6 +297,11 @@ def seed_everything():
     admin_user.set_password('ForgeAdmin2026!#')
     admin_user.save()
     print("Created/Updated Super Admin: admin@forgeflight.com")
+
+    # Disable mandatory admin review & auto-approve any pending startups
+    SiteSettings.objects.update_or_create(pk=1, defaults={'require_startup_approval': False})
+    Startup.objects.filter(review_status='pending').update(review_status='approved')
+    print("Auto-approved all startups and disabled review requirement.")
 
     created_users = []
     created_startups = []
