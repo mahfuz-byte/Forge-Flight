@@ -86,5 +86,5 @@ All state changes go through `startups/services.py` (one transaction each, rows 
 ## Notes
 
 - `venv/` and `.env` are gitignored — `requirements.txt` and `.env.example` are the source of truth for recreating them.
-- The frontend calls this API for accounts, startups, posts, investments, applications, and messages. Notifications remain mock data in the frontend.
+- The frontend calls this API for accounts, startups, posts, investments, applications, messages, and notifications.
 - `seed_demo` is idempotent (`update_or_create` on startup slug) — safe to re-run after pulling changes to the seed data.
