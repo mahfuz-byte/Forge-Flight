@@ -1,31 +1,47 @@
+databases:
+  - name: forge-flight-db
+    databaseName: forge_flight
+    user: forge_user
+    plan: free
+
 services:
   - type: web
     name: forge-flight-api
     runtime: python
-    plan: starter
+    plan: free
     rootDir: backend
     buildCommand: pip install -r requirements.txt && python manage.py collectstatic --noinput
     preDeployCommand: python manage.py migrate --noinput
     startCommand: gunicorn config.wsgi:application --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120
     healthCheckPath: /api/health/
-    disk:
-      name: forge-flight-media
-      mountPath: /opt/render/project/src/backend/media
-      sizeGB: 1
     envVars:
       - key: PYTHON_VERSION
-        value: 3.13.7
+        value: "3.13"
       - key: DJANGO_DEBUG
         value: "False"
       - key: DJANGO_SECRET_KEY
         generateValue: true
       - key: DATABASE_URL
-        sync: false
+        fromDatabase:
+          name: forge-flight-db
+          property: connectionString
       - key: BEHIND_TLS_PROXY
         value: "True"
-      - key: DJANGO_MEDIA_ROOT
-        value: /opt/render/project/src/backend/media
       - key: DJANGO_SERVE_MEDIA
         value: "True"
       - key: NUM_PROXIES
         value: "1"
+      - key: DJANGO_CORS_ALLOWED_ORIGINS
+        value: "https://forge-flight-plum.vercel.app"
+      - key: DJANGO_CSRF_TRUSTED_ORIGINS
+        value: "https://forge-flight-plum.vercel.app"
+      - key: DJANGO_ALLOWED_HOSTS
+        value: "localhost,127.0.0.1,.onrender.com"
+      - key: SESSION_COOKIE_SAMESITE
+        value: "None"
+      - key: CSRF_COOKIE_SAMESITE
+        value: "None"
+      - key: SESSION_COOKIE_SECURE
+        value: "True"
+      - key: CSRF_COOKIE_SECURE
+        value: "True"

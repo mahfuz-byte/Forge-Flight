@@ -42,3 +42,5 @@ backend/deployment-data.json
 
 # Understand-Anything knowledge graph
 .ua/
+.vercel
+.env*

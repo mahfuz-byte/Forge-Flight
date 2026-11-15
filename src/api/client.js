@@ -17,14 +17,26 @@ export function setAuthToken(token) {
   else window.sessionStorage.removeItem(TOKEN_KEY);
 }
 
+let csrfTokenCache = null;
+
 function getCookie(name) {
   const match = document.cookie.match(new RegExp(`(?:^|; )${name}=([^;]*)`));
   return match ? decodeURIComponent(match[1]) : null;
 }
 
 export async function ensureCsrfCookie() {
-  if (!getCookie('csrftoken')) {
-    await fetch(`${BASE_URL}/csrf/`, { credentials: 'include' });
+  if (!getCookie('csrftoken') && !csrfTokenCache) {
+    try {
+      const res = await fetch(`${BASE_URL}/csrf/`, { credentials: 'include' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data && data.csrfToken) {
+          csrfTokenCache = data.csrfToken;
+        }
+      }
+    } catch {
+      // network / pre-flight failure will be surfaced by the subsequent mutation
+    }
   }
 }
 
@@ -43,7 +55,7 @@ async function request(path, { method = 'GET', body, params } = {}) {
     headers.Authorization = `Token ${token}`;
   } else if (method !== 'GET' && method !== 'HEAD') {
     await ensureCsrfCookie();
-    headers['X-CSRFToken'] = getCookie('csrftoken') || '';
+    headers['X-CSRFToken'] = getCookie('csrftoken') || csrfTokenCache || '';
   }
 
   const res = await fetch(url, {
