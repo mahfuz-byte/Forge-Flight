@@ -13,11 +13,11 @@
 .ptab { padding: 10px 14px; font-size: 13px; font-weight: 700; color: var(--text-faint); border: none; background: none; border-bottom: 2px solid transparent; white-space: nowrap; }
 .ptab.active { color: var(--accent); border-color: var(--accent); }
 .profile-body { padding: 28px; display: grid; grid-template-columns: 1fr 300px; gap: 32px; }
-@media (max-width: 860px) { .profile-body { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { .profile-body { grid-template-columns: minmax(0, 1fr); } }
 .prose p { color: var(--text-muted); font-size: 14.5px; line-height: 1.7; margin-bottom: 14px; }
 .prose h5 { font-family: 'Libre Franklin'; font-size: 13px; letter-spacing: .03em; text-transform: uppercase; color: var(--text-faint); margin: 22px 0 8px; }
 
-.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+.team-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(150px, 100%), 1fr)); gap: 16px; }
 .team-card { background: var(--surface); border-radius: 8px; padding: 16px; text-align: center; }
 .team-card .avatar { width: 52px; height: 52px; margin: 0 auto 10px; font-size: 16px; }
 .team-card b { display: block; font-size: 13px; }
@@ -78,5 +78,9 @@
   .profile-name { font-size: 1.4rem; }
   .profile-info { min-width: 0; }
   .profile-actions { padding-bottom: 0; flex-wrap: wrap; }
+  .profile-head .profile-info { flex-basis: 100%; }
+  .profile-actions .btn { flex: 1 1 auto; }
+  .doc-row { flex-wrap: wrap; }
+  .doc-row .d-meta { margin-left: 0; }
   .gallery-grid { grid-template-columns: repeat(2, 1fr); }
 }

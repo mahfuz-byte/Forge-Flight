@@ -140,7 +140,7 @@
 /* KPI Cards Grid */
 .stats-kpi-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(170px, 100%), 1fr));
   gap: 14px;
   margin-bottom: 24px;
 }
@@ -258,7 +258,7 @@
 /* Strengths & Risks Columns */
 .ai-insights-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(260px, 100%), 1fr));
   gap: 16px;
   margin-bottom: 20px;
 }
@@ -376,7 +376,7 @@
 /* Visual Interactive Charts */
 .charts-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(320px, 100%), 1fr));
   gap: 20px;
   margin-bottom: 24px;
 }
@@ -532,6 +532,24 @@
 .data-preview-table-wrapper {
   overflow-x: auto;
   margin-top: 12px;
+}
+
+@media (max-width: 640px) {
+  .stats-page { padding-bottom: 24px; }
+  .stats-header-card, .stats-ai-card { padding: 16px; }
+  .stats-header-titles, .stats-startup-select { min-width: 0; max-width: 100%; }
+  .stats-startup-select { width: 100%; }
+  .stats-kpi-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .charts-grid { gap: 12px; }
+  .chart-card { min-width: 0; padding: 14px; }
+  .interactive-bar-chart { gap: 4px; }
+  .bar-label-text { font-size: 9px; }
+  .chart-legend { flex-wrap: wrap; gap: 8px 16px; }
+  .rec-item { flex-wrap: wrap; }
+}
+
+@media (max-width: 360px) {
+  .stats-kpi-grid { grid-template-columns: minmax(0, 1fr); }
 }
 
 .data-preview-table {

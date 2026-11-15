@@ -15,7 +15,7 @@
 .tag-filter:hover { border-color: var(--border-strong); color: var(--text-muted); }
 .tag-filter.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
 
-.explore-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 16px; padding-bottom: 20px; }
+.explore-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 16px; padding-bottom: 20px; }
 .explore-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; cursor: pointer; background: var(--bg-elevated); transition: border-color .15s, transform .12s, box-shadow .15s; }
 .explore-card:hover { border-color: var(--accent); transform: translateY(-2px); box-shadow: var(--shadow-sm); }
 .explore-card-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }

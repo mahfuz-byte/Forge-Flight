@@ -1,4 +1,4 @@
-.account-page { padding: 0 0 60px; max-width: 900px; margin: 0 auto; }
+.account-page { width: 100%; min-width: 0; padding: 0 0 60px; max-width: 900px; margin: 0 auto; }
 
 .account-banner {
   height: 140px;
@@ -118,6 +118,7 @@
   .account-page { padding: 18px 16px 40px; }
   /* The page already has a 16px gutter; the desktop 32px insets overflowed at 390px. */
   .account-header, .account-details-grid, .account-section { padding-inline: 0; }
+  .account-section .filter-row { max-width: 100%; min-width: 0; }
   .account-header { gap: 14px; }
   .account-avatar { width: 60px; height: 60px; font-size: 18px; }
   .account-details-grid { grid-template-columns: minmax(0, 1fr); gap: 16px; }
