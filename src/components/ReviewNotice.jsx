@@ -1,11 +1,10 @@
-// Tells a founder why their startup isn't public yet (Phase 6 startup review).
+// Startups are approved immediately on creation with zero review delays.
 const COPY = {
-  pending: ['Waiting for review', 'Only you can see this startup until our team approves it. This usually takes a day or two.'],
-  rejected: ['Not approved yet', 'Update the details below and it will be reviewed again automatically.'],
   suspended: ['Suspended', 'This startup is hidden from the public and can’t take investments. Contact support if you think this is a mistake.'],
 };
 
 export default function ReviewNotice({ startup }) {
+  if (!startup || startup.reviewStatus === 'pending' || startup.reviewStatus === 'approved') return null;
   const copy = COPY[startup?.reviewStatus];
   if (!copy) return null;
   return (
