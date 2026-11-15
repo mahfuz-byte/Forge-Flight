@@ -38,6 +38,7 @@ testfile.txt
 backend/media/statistics_files/
 backend/staticfiles/
 backend/media/
+backend/deployment-data.json
 .vercel/
 
 # Understand-Anything knowledge graph

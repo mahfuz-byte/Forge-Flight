@@ -28,10 +28,10 @@ Install the new Python requirements first:
 
 ```powershell
 .\venv\Scripts\python.exe -m pip install -r requirements.txt
-.\venv\Scripts\python.exe manage.py dumpdata --natural-foreign --natural-primary --exclude contenttypes --exclude auth.permission --exclude sessions -o deployment-data.local
+.\venv\Scripts\python.exe -X utf8 manage.py dumpdata --natural-foreign --natural-primary --exclude contenttypes --exclude auth.permission --exclude sessions -o deployment-data.json
 ```
 
-`deployment-data.local` contains the current demo database and is ignored by
+`deployment-data.json` contains the current demo database and is ignored by
 Git. Keep this file private. Make a copy of `backend/media/` before migration.
 
 In a separate PowerShell window, temporarily set `DB_NAME=postgres`,
@@ -41,7 +41,8 @@ variables from the S3 settings. Then, from `backend/`, run:
 
 ```powershell
 .\venv\Scripts\python.exe manage.py migrate
-.\venv\Scripts\python.exe manage.py loaddata deployment-data.local
+.\venv\Scripts\python.exe manage.py loaddata deployment-data.json
+Remove-Item deployment-data.json
 .\venv\Scripts\python.exe manage.py copy_media_to_storage
 .\venv\Scripts\python.exe manage.py copy_media_to_storage --apply
 ```
@@ -116,9 +117,10 @@ must also trust the deployed frontend origin. Once deployed, confirm
 ## 5. Deploy React to Vercel
 
 Create a second Vercel project from the same repository, with Root Directory
-set to the repository root and Vite detected. Set `API_ORIGIN` to the Django
-project's stable HTTPS origin, without a trailing path. Leave `VITE_API_URL`
-unset so the browser uses the same-origin `/api` proxy. If using Google sign-in,
+set to the repository root and Vite detected. The root `vercel.json` proxies
+`/api/` to `https://forge-flight-cuet-six.vercel.app`; update that destination
+if the Django project's URL changes. Leave `VITE_API_URL` unset so the browser
+uses the same-origin `/api` proxy. If using Google sign-in,
 set `VITE_GOOGLE_CLIENT_ID` to the OAuth web client ID and update its allowed
 origin in Google Cloud. Deploy and test the frontend's `*.vercel.app` URL.
 
