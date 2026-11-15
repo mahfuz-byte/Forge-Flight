@@ -1,0 +1,21 @@
+date,customer_name,customer_email,customer_segment,sales_amount,cost_amount,category
+2026-01-04,Urban Outfitters Co,orders@urbanoutfitters.com,Wholesale,6500.00,3200.00,Inventory Sourcing
+2026-01-11,Maya Lin,maya.lin@gmail.com,Retail,180.00,75.00,Fulfillment & Shipping
+2026-01-18,James Robertson,j.robertson@outlook.com,Retail,320.00,120.00,Packaging & Freight
+2026-01-25,Nordic Collective,procurement@nordiccollective.se,B2B,8900.00,4100.00,Inventory Sourcing
+2026-02-03,Kendra Morales,kmorales99@yahoo.com,Retail,240.00,90.00,Fulfillment & Shipping
+2026-02-10,Urban Outfitters Co,orders@urbanoutfitters.com,Wholesale,8200.00,3900.00,Inventory Sourcing
+2026-02-17,Sora Takahashi,sora.t@takahashi.jp,Retail,450.00,160.00,Packaging & Freight
+2026-02-24,EcoGoods Market,purchasing@ecogoods.org,B2B,5400.00,2600.00,Inventory Sourcing
+2026-03-04,Liam Bennett,liam.bennett@gmail.com,Retail,195.00,80.00,Fulfillment & Shipping
+2026-03-12,Nordic Collective,procurement@nordiccollective.se,B2B,11500.00,5200.00,Inventory Sourcing
+2026-03-19,Chloe Martin,chloe.m@martinco.com,Retail,520.00,190.00,Packaging & Freight
+2026-03-27,Urban Outfitters Co,orders@urbanoutfitters.com,Wholesale,9400.00,4300.00,Inventory Sourcing
+2026-04-05,Arthur Pendelton,arthur.p@icloud.com,Retail,290.00,110.00,Fulfillment & Shipping
+2026-04-14,EcoGoods Market,purchasing@ecogoods.org,B2B,6800.00,3100.00,Inventory Sourcing
+2026-04-22,Aaliyah Khan,akhan@gmail.com,Retail,380.00,140.00,Packaging & Freight
+2026-04-29,Urban Outfitters Co,orders@urbanoutfitters.com,Wholesale,12000.00,5500.00,Inventory Sourcing
+2026-05-07,Nordic Collective,procurement@nordiccollective.se,B2B,14200.00,6400.00,Inventory Sourcing
+2026-05-16,Mateo Silva,mateo.silva@hotmail.com,Retail,410.00,150.00,Fulfillment & Shipping
+2026-05-24,EcoGoods Market,purchasing@ecogoods.org,B2B,7600.00,3400.00,Inventory Sourcing
+2026-05-30,Urban Outfitters Co,orders@urbanoutfitters.com,Wholesale,10500.00,4800.00,Inventory Sourcing

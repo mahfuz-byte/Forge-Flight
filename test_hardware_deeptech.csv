@@ -1,0 +1,12 @@
+date,customer_name,customer_email,customer_segment,sales_amount,cost_amount,category
+2026-01-10,Tesla Robotics Dept,robotics-ap@tesla.com,Enterprise,45000.00,38000.00,Sensor Array Hardware
+2026-01-24,Northrop Dynamics,procurement@northrop-d.com,Enterprise,68000.00,56000.00,Custom Actuators
+2026-02-05,RoboFarm AgTech,founders@robofarm.ag,Mid-Market,18000.00,16500.00,Telemetry Module
+2026-02-18,MIT Autonomous Lab,research-purchasing@mit.edu,Education,12000.00,9800.00,Developer Kit
+2026-03-02,Tesla Robotics Dept,robotics-ap@tesla.com,Enterprise,52000.00,43000.00,Sensor Array Hardware
+2026-03-15,AeroSpace Frontiers,contracting@aerospacefrontiers.org,Enterprise,95000.00,79000.00,Avionics Pilot
+2026-03-29,Boston Precision,purchasing@bostonprecision.com,Mid-Market,22000.00,18500.00,Lidar Units
+2026-04-11,Northrop Dynamics,procurement@northrop-d.com,Enterprise,82000.00,68000.00,Custom Actuators
+2026-04-25,RoboFarm AgTech,founders@robofarm.ag,Mid-Market,24000.00,21000.00,Telemetry Module
+2026-05-09,Tesla Robotics Dept,robotics-ap@tesla.com,Enterprise,60000.00,49000.00,Sensor Array Hardware
+2026-05-23,Stanford Robotics Lab,eng-orders@stanford.edu,Education,14000.00,11200.00,Developer Kit

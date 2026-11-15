@@ -1,0 +1,22 @@
+date,customer_name,customer_email,customer_segment,sales_amount,cost_amount,category
+2026-01-05,DataWave Analytics,billing@datawave.io,Enterprise,4500.00,450.00,Cloud Platform
+2026-01-12,Zenith Health,admin@zenithhealth.co,Mid-Market,1200.00,180.00,Annual Subscription
+2026-01-19,PixelCraft Studio,hello@pixelcraft.design,SMB,499.00,60.00,Pro Tier
+2026-01-26,OmniMedia Group,accounts@omnimediagroup.com,Enterprise,5800.00,600.00,Enterprise License
+2026-02-02,DataWave Analytics,billing@datawave.io,Enterprise,4500.00,450.00,Cloud Platform
+2026-02-08,ByteScale Cloud,devops@bytescale.net,Mid-Market,2400.00,320.00,Add-on Storage
+2026-02-15,Veloce Logistics,it@velocelogistics.eu,Enterprise,6200.00,750.00,Enterprise License
+2026-02-22,Aura FinTech,finance@aurafintech.io,Enterprise,7500.00,900.00,Custom Integrations
+2026-03-01,DataWave Analytics,billing@datawave.io,Enterprise,4500.00,450.00,Cloud Platform
+2026-03-09,SwiftPay Solutions,ops@swiftpay.com,Mid-Market,3100.00,400.00,Annual Subscription
+2026-03-16,Zenith Health,admin@zenithhealth.co,Mid-Market,1800.00,220.00,Seat Expansion
+2026-03-23,PulseWave AI,billing@pulsewave.ai,Enterprise,8900.00,1100.00,API Throughput
+2026-04-02,DataWave Analytics,billing@datawave.io,Enterprise,4500.00,450.00,Cloud Platform
+2026-04-10,Veloce Logistics,it@velocelogistics.eu,Enterprise,6200.00,750.00,Enterprise License
+2026-04-17,Kite Interactive,support@kiteinteractive.com,SMB,899.00,110.00,Team Plan
+2026-04-24,Aura FinTech,finance@aurafintech.io,Enterprise,8200.00,950.00,Custom Integrations
+2026-05-01,DataWave Analytics,billing@datawave.io,Enterprise,4500.00,450.00,Cloud Platform
+2026-05-08,PulseWave AI,billing@pulsewave.ai,Enterprise,10500.00,1250.00,API Throughput
+2026-05-15,Zenith Health,admin@zenithhealth.co,Mid-Market,2200.00,280.00,Seat Expansion
+2026-05-22,OmniMedia Group,accounts@omnimediagroup.com,Enterprise,6500.00,720.00,Enterprise License
+2026-05-29,Veloce Logistics,it@velocelogistics.eu,Enterprise,7200.00,850.00,Enterprise License

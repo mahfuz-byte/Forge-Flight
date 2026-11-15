@@ -1,0 +1,21 @@
+date,customer_name,customer_email,customer_segment,sales_amount,cost_amount,category
+2026-01-08,Apex Global Systems,billing@apexsystems.com,Enterprise,14500.00,3200.00,Software License
+2026-01-14,TechNova Labs,accounts@technova.io,Mid-Market,6200.00,1600.00,Cloud Infrastructure
+2026-01-22,Marcus Vance,m.vance@vancestudio.design,Prosumer,1400.00,350.00,Subscription
+2026-01-29,BioHealth Dynamics,procurement@biohealth.org,Enterprise,18500.00,4400.00,Custom Deployment
+2026-02-04,GreenPulse Energy,ops@greenpulse.com,Mid-Market,8400.00,2100.00,Software License
+2026-02-11,Quantum Leap AI,finance@quantumleap.ai,Enterprise,21000.00,5100.00,Data Processing
+2026-02-19,Sarah Jenkins,s.jenkins@jenkinslaw.com,SMB,2900.00,650.00,Subscription
+2026-02-26,Apex Global Systems,billing@apexsystems.com,Enterprise,16000.00,3800.00,Software License
+2026-03-05,CloudStream Media,payables@cloudstream.net,Mid-Market,9800.00,2400.00,Cloud Infrastructure
+2026-03-12,Nexus Robotics,contracting@nexusrobotics.org,Enterprise,27500.00,6800.00,Enterprise Bundle
+2026-03-18,Elena Rostova,elena@rostovamedia.com,Prosumer,1800.00,420.00,Subscription
+2026-03-27,TechNova Labs,accounts@technova.io,Mid-Market,7500.00,1900.00,Cloud Infrastructure
+2026-04-03,Horizon Logistics,ap@horizonlogistics.com,Mid-Market,11200.00,2900.00,Software License
+2026-04-12,BioHealth Dynamics,procurement@biohealth.org,Enterprise,19000.00,4500.00,Support SLA
+2026-04-20,David Chen,dchen@chenadvisors.com,SMB,3400.00,800.00,Subscription
+2026-04-28,Quantum Leap AI,finance@quantumleap.ai,Enterprise,24000.00,5800.00,Data Processing
+2026-05-06,Vanguard Retailers,finance@vanguardretail.com,Enterprise,15500.00,3900.00,Custom Deployment
+2026-05-15,Nexus Robotics,contracting@nexusrobotics.org,Enterprise,31000.00,7600.00,Enterprise Bundle
+2026-05-22,Liam O'Connor,liam@autoconnect.io,SMB,4200.00,950.00,Subscription
+2026-05-30,GreenPulse Energy,ops@greenpulse.com,Mid-Market,9600.00,2300.00,Software License
