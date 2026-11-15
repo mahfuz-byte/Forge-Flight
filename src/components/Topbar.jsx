@@ -9,6 +9,7 @@ export default function Topbar() {
   const navigate = useNavigate();
   const {
     currentUser, logOut, theme, toggleTheme, signedIn, notifications, unreadNotificationCount, markNotificationRead,
+    myStartups,
   } = useApp();
   const latest = notifications.slice(0, 5);
 
@@ -100,6 +101,17 @@ export default function Topbar() {
           {open === 'menu' && (
             <div className="dropdown" data-panel="menu">
               <button className="menu-item" onClick={() => { setOpen(null); navigate('/account'); }}><Icon name="user" />Your profile</button>
+              {signedIn && (
+                <button
+                  className="menu-item"
+                  onClick={() => {
+                    setOpen(null);
+                    navigate(myStartups && myStartups.length > 0 ? `/dashboard/${myStartups[0][0]}` : '/dashboard');
+                  }}
+                >
+                  <Icon name="flag" />Manage Startup
+                </button>
+              )}
               <button className="menu-item" onClick={() => { setOpen(null); navigate('/settings'); }}><Icon name="gear" />Settings</button>
               {currentUser.role && currentUser.role !== 'user' && (
                 <button className="menu-item" onClick={() => { setOpen(null); navigate('/admin'); }}><Icon name="chart" />Admin panel</button>

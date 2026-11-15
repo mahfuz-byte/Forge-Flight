@@ -9,7 +9,7 @@
 .app-row-meta { font-size: 11.5px; color: var(--text-faint); }
 .app-row-msg { font-size: 12.5px; color: var(--text-muted); margin-top: 3px; max-width: 480px; }
 .app-row-link { font-size: 12px; color: var(--info); font-family: 'IBM Plex Mono'; margin-top: 2px; }
-.app-row-actions { display: flex; gap: 8px; flex-shrink: 0; }
+.app-row-actions { display: flex; gap: 8px; flex-shrink: 0; align-items: center; }
 
 .dash-chart-label { font-family: 'Libre Franklin'; text-transform: uppercase; letter-spacing: .04em; font-size: 12px; color: var(--text-faint); margin-bottom: 14px; }
 .bar-chart { display: flex; align-items: flex-end; gap: 12px; height: 140px; padding: 0 4px; }
@@ -26,8 +26,249 @@
 .portfolio-card .pc-amount b { display: block; font-family: 'IBM Plex Mono'; font-size: 15px; }
 .portfolio-card .pc-amount span { font-size: 11px; color: var(--text-faint); }
 
+/* Manage Startup Banner (Main Dashboard / Feed) */
+.manage-startup-banner {
+  background: var(--bg-elevated);
+  border: 1px solid var(--accent-alpha);
+  border-left: 4px solid var(--accent);
+  border-radius: var(--radius-md);
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  box-shadow: var(--shadow-sm);
+}
+.ms-banner-left { display: flex; align-items: center; gap: 14px; min-width: 0; }
+.ms-banner-info { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.ms-banner-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.ms-banner-title b { font-size: 14.5px; color: var(--text); }
+.ms-banner-sub { font-size: 12px; color: var(--text-muted); }
+.ms-banner-actions { display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+
+/* Dashboard Header & Startup Switcher */
+.dash-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.dash-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.dash-selector select {
+  font-family: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--bg-elevated);
+  color: var(--text);
+  cursor: pointer;
+}
+
+/* Metric ribbon */
+.dash-metrics-ribbon {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.dash-metric-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.dash-metric-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-faint); font-weight: 600; }
+.dash-metric-val { font-size: 18px; font-weight: 700; color: var(--text); font-family: 'IBM Plex Mono', monospace; }
+.dash-metric-sub { font-size: 11px; color: var(--text-muted); }
+
+/* Toast / Feedback Notice */
+.dash-toast {
+  background: var(--accent-alpha);
+  border: 1px solid var(--accent);
+  color: var(--accent-strong);
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  animation: fadeIn 0.25s ease-in;
+}
+
+/* Investor & Collaborator Request Cards */
+.portal-card {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 16px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.portal-card:hover {
+  border-color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.portal-card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.portal-card-user {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.portal-user-meta { display: flex; flex-direction: column; gap: 2px; }
+.portal-user-meta b { font-size: 14px; color: var(--text); cursor: pointer; }
+.portal-user-meta b:hover { color: var(--accent); text-decoration: underline; }
+.portal-user-meta span { font-size: 12px; color: var(--text-faint); }
+.portal-card-badge { display: flex; align-items: center; gap: 6px; }
+
+.portal-card-content {
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  padding: 10px 14px;
+  font-size: 12.5px;
+  color: var(--text-muted);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.portal-card-highlight {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 13px;
+}
+.portal-card-highlight b { font-family: 'IBM Plex Mono', monospace; font-size: 15px; color: var(--text); }
+
+.portal-card-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 4px;
+  border-top: 1px dashed var(--border);
+}
+
+/* Post items in Manage Startup */
+.dash-post-item {
+  background: var(--bg-elevated);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.dash-post-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.dash-post-type {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-alpha);
+  color: var(--accent-strong);
+}
+.dash-post-title {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--text);
+  margin: 0;
+}
+.dash-post-snippet {
+  font-size: 12.5px;
+  color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
+}
+.dash-post-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+}
+
+/* Modal styling for Investor Portal and Collaborator Profile */
+.portal-modal-panel {
+  max-width: 580px;
+  width: 100%;
+}
+.portal-modal-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid var(--border);
+}
+.portal-modal-head-info { display: flex; flex-direction: column; gap: 3px; }
+.portal-modal-head-info h3 { margin: 0; font-size: 18px; color: var(--text); }
+.portal-modal-head-info span { font-size: 12px; color: var(--text-faint); }
+.portal-modal-section { margin-bottom: 16px; }
+.portal-modal-section h5 {
+  font-size: 11.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--text-faint);
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+.portal-modal-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  color: var(--text);
+  line-height: 1.5;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 @media (max-width: 640px) {
   .bar-chart { gap: 6px; }
   .app-row { flex-direction: column; }
   .app-row-actions { align-self: flex-end; }
+  .manage-startup-banner { flex-direction: column; align-items: flex-start; }
+  .ms-banner-actions { width: 100%; justify-content: flex-end; }
+  .portal-card-footer { flex-direction: column; align-items: flex-start; }
 }

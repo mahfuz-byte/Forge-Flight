@@ -15,7 +15,10 @@ const ITEMS = [
 export default function LeftNav() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { openCreatePost, signedIn, logOut, unreadMessageCount, unreadNotificationCount } = useApp();
+  const {
+    openCreatePost, signedIn, logOut, unreadMessageCount, unreadNotificationCount,
+    myStartups, investments, applications,
+  } = useApp();
   const badges = { '/messages': unreadMessageCount, '/notifications': unreadNotificationCount };
   const [createStartupOpen, setCreateStartupOpen] = useState(false);
 
@@ -24,6 +27,11 @@ export default function LeftNav() {
     if (location.pathname !== path) return false;
     return (location.search.slice(1) || '') === (query || '');
   }
+
+  const isManageActive = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/manage-startup');
+  const myStartupSlugs = new Set((myStartups || []).map(([s]) => s));
+  const pendingCount = (investments || []).filter((i) => myStartupSlugs.has(i.startupId) && i.status === 'pending').length
+    + (applications || []).filter((a) => myStartupSlugs.has(a.startupId) && a.status === 'pending').length;
 
   return (
     <>
@@ -42,6 +50,24 @@ export default function LeftNav() {
             )}
           </button>
         ))}
+        {signedIn && (
+          <button
+            className={`nav-item${isManageActive ? ' active' : ''}`}
+            onClick={() => {
+              if (myStartups && myStartups.length > 0) {
+                navigate(`/dashboard/${myStartups[0][0]}`);
+              } else {
+                navigate('/dashboard');
+              }
+            }}
+          >
+            <Icon name="flag" /><span className="nav-label-full">Manage Startup</span>
+            <span className="nav-label-mobile">Manage</span>
+            {pendingCount > 0 && (
+              <span className="nav-badge" aria-label={`${pendingCount} pending requests`}>{pendingCount}</span>
+            )}
+          </button>
+        )}
         <button className={`nav-item${isActive('/account') ? ' active' : ''}`} onClick={() => navigate('/account')}>
           <Icon name="user" /><span>Profile</span>
         </button>

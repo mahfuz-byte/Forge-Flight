@@ -141,9 +141,20 @@ function transformPost(p) {
 function transformApplication(a) {
   return {
     id: a.id, startupId: a.startup, type: 'collaboration',
-    role: a.role, name: a.name, email: a.email, link: a.link, message: a.message,
+    role: a.role, name: a.name || a.applicant_name, email: a.email || a.applicant_email, link: a.link, message: a.message,
     applicantId: a.applicant, time: timeAgo(a.created_at), status: a.status,
     decidedAt: a.decided_at,
+    applicantName: a.applicant_name || a.name || 'Collaborator',
+    applicantEmail: a.applicant_email || a.email || '',
+    applicantAvatar: mediaUrl(a.applicant_avatar),
+    applicantHeadline: a.applicant_headline || '',
+    applicantBio: a.applicant_bio || '',
+    applicantLocation: a.applicant_location || '',
+    applicantSkills: a.applicant_skills || '',
+    applicantExperienceLevel: a.applicant_experience_level || '',
+    applicantPortfolioLink: a.applicant_portfolio_link || a.link || '',
+    applicantResume: mediaUrl(a.applicant_resume),
+    startupName: a.startup_name || '',
   };
 }
 
@@ -152,6 +163,17 @@ function transformInvestment(i) {
     id: i.id, startupId: i.startup, amount: i.amount,
     investorId: i.investor, time: timeAgo(i.created_at), status: i.status,
     note: i.decision_note || '',
+    investorName: i.investor_name || 'Investor',
+    investorEmail: i.investor_email || '',
+    investorAvatar: mediaUrl(i.investor_avatar),
+    investorHeadline: i.investor_headline || '',
+    investorBio: i.investor_bio || '',
+    investorLocation: i.investor_location || '',
+    investorType: i.investor_type || 'Angel / VC Investor',
+    investorBudget: i.investor_budget || '',
+    investorInterests: i.investor_interests || '',
+    investorPortfolio: i.investor_portfolio || '',
+    startupName: i.startup_name || '',
   };
 }
 

@@ -42,7 +42,10 @@ export default function App() {
           <Route path="/messages" element={<Messages />} />
           <Route path="/notifications" element={<Notifications />} />
           <Route path="/account" element={<AccountProfile />} />
+          <Route path="/dashboard" element={<FounderDashboard />} />
           <Route path="/dashboard/:id" element={<FounderDashboard />} />
+          <Route path="/manage-startup" element={<FounderDashboard />} />
+          <Route path="/manage-startup/:id" element={<FounderDashboard />} />
           <Route path="/statistics" element={<Statistics />} />
           <Route path="/settings" element={<Settings />} />
           <Route

@@ -163,10 +163,25 @@ class StartupWriteSerializer(serializers.ModelSerializer):
 
 
 class ApplicationSerializer(StartupImmutableOnUpdateMixin, serializers.ModelSerializer):
+    applicant_name = serializers.ReadOnlyField(source='applicant.name')
+    applicant_email = serializers.ReadOnlyField(source='applicant.email')
+    applicant_avatar = serializers.ImageField(source='applicant.avatar', read_only=True)
+    applicant_headline = serializers.ReadOnlyField(source='applicant.headline')
+    applicant_bio = serializers.ReadOnlyField(source='applicant.bio')
+    applicant_location = serializers.ReadOnlyField(source='applicant.location')
+    applicant_skills = serializers.ReadOnlyField(source='applicant.skills')
+    applicant_experience_level = serializers.ReadOnlyField(source='applicant.experience_level')
+    applicant_portfolio_link = serializers.ReadOnlyField(source='applicant.portfolio_link')
+    applicant_resume = serializers.FileField(source='applicant.resume', read_only=True)
+    startup_name = serializers.ReadOnlyField(source='startup.name')
+
     class Meta:
         model = Application
         fields = [
-            'id', 'startup', 'applicant', 'role', 'name', 'email',
+            'id', 'startup', 'startup_name', 'applicant', 'applicant_name', 'applicant_email',
+            'applicant_avatar', 'applicant_headline', 'applicant_bio', 'applicant_location',
+            'applicant_skills', 'applicant_experience_level', 'applicant_portfolio_link',
+            'applicant_resume', 'role', 'name', 'email',
             'link', 'message', 'status', 'created_at', 'decided_at',
         ]
         read_only_fields = ['applicant', 'status', 'role', 'decided_at']
@@ -186,10 +201,25 @@ class ApplicationSerializer(StartupImmutableOnUpdateMixin, serializers.ModelSeri
 
 
 class InvestmentSerializer(StartupImmutableOnUpdateMixin, serializers.ModelSerializer):
+    investor_name = serializers.ReadOnlyField(source='investor.name')
+    investor_email = serializers.ReadOnlyField(source='investor.email')
+    investor_avatar = serializers.ImageField(source='investor.avatar', read_only=True)
+    investor_headline = serializers.ReadOnlyField(source='investor.headline')
+    investor_bio = serializers.ReadOnlyField(source='investor.bio')
+    investor_location = serializers.ReadOnlyField(source='investor.location')
+    investor_type = serializers.ReadOnlyField(source='investor.investor_type')
+    investor_budget = serializers.ReadOnlyField(source='investor.investment_budget')
+    investor_interests = serializers.ReadOnlyField(source='investor.investment_interests')
+    investor_portfolio = serializers.ReadOnlyField(source='investor.portfolio_link')
+    startup_name = serializers.ReadOnlyField(source='startup.name')
+
     class Meta:
         model = Investment
         fields = [
-            'id', 'startup', 'investor', 'amount', 'status', 'created_at', 'updated_at',
+            'id', 'startup', 'startup_name', 'investor', 'investor_name', 'investor_email',
+            'investor_avatar', 'investor_headline', 'investor_bio', 'investor_location',
+            'investor_type', 'investor_budget', 'investor_interests', 'investor_portfolio',
+            'amount', 'status', 'created_at', 'updated_at',
             'decided_at', 'decision_note',
         ]
         read_only_fields = ['investor', 'status', 'updated_at', 'decided_at', 'decision_note']
