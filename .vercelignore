@@ -1,0 +1,15 @@
+# Ignore backend
+backend/
+backend/**
+
+# Ignore dependencies and git
+node_modules/
+.git/
+.venv/
+venv/
+
+# Ignore artifacts & logs
+*.log
+*.csv
+dist/
+.vercel/
