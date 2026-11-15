@@ -284,6 +284,19 @@ USERS_DATA = [
 def seed_everything():
     print("=== SEEDING 20 BANGLADESHI USERS & STARTUPS ===")
     
+    # 0. Create / Ensure Super Admin
+    admin_user, _ = User.objects.get_or_create(email='admin@forgeflight.com')
+    admin_user.first_name = 'Forge'
+    admin_user.last_name = 'Admin'
+    admin_user.role = Role.SUPER_ADMIN
+    admin_user.is_staff = True
+    admin_user.is_superuser = True
+    admin_user.is_active = True
+    admin_user.email_verified = True
+    admin_user.set_password('ForgeAdmin2026!#')
+    admin_user.save()
+    print("Created/Updated Super Admin: admin@forgeflight.com")
+
     created_users = []
     created_startups = []
     
