@@ -1,4 +1,4 @@
-export const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+export const BASE_URL = import.meta.env.VITE_API_URL || (import.meta.env.PROD ? '/api' : 'http://localhost:8000/api');
 const TOKEN_KEY = 'forge-flight-auth-token';
 
 // Uploaded files come back as "/media/..." or absolute URLs; make them absolute.
@@ -29,6 +29,12 @@ export async function ensureCsrfCookie() {
 }
 
 async function request(path, { method = 'GET', body, params } = {}) {
+  if (import.meta.env.PROD && body instanceof FormData) {
+    const bytes = [...body.values()].reduce((total, value) => total + (value instanceof File ? value.size : new Blob([value]).size), 0);
+    if (bytes > 4 * 1024 * 1024) {
+      throw new Error('For this online demo, uploads must be under 4 MB.');
+    }
+  }
   let url = `${BASE_URL}${path}`;
   if (params) {
     const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== null && v !== ''));
@@ -76,6 +82,7 @@ function errorMessage(data, status) {
     if (value) return field === 'non_field_errors' ? String(first(value)) : `${field}: ${first(value)}`;
   }
   if (status === 429) return 'Too many requests. Please wait a moment and try again.';
+  if (status === 413) return 'For this online demo, uploads must be under 4 MB.';
   return `Request failed (${status}). Please try again.`;
 }
 

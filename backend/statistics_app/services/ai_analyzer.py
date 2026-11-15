@@ -134,7 +134,9 @@ Generate a comprehensive business analysis JSON with these exact keys:
 
     try:
         import ollama
-        client = ollama.Client(host=host)
+        bridge_token = getattr(settings, 'OLLAMA_BRIDGE_TOKEN', '')
+        headers = {'Authorization': f'Bearer {bridge_token}'} if bridge_token else None
+        client = ollama.Client(host=host, headers=headers, timeout=260)
         
         response = client.chat(
             model=model_name,
@@ -156,8 +158,8 @@ Generate a comprehensive business analysis JSON with these exact keys:
         data['engine'] = f"ollama/{model_name}"
         return data
 
-    except Exception as e:
-        logger.warning(f"Ollama call failed or unavailable ({e}). Utilizing intelligent business heuristic engine.")
+    except Exception:
+        logger.exception('Ollama call failed or is unavailable; using the built-in analysis.')
         fallback = generate_fallback_analysis(raw_summary, startup_name)
-        fallback['notice'] = f"Analyzed using built-in business intelligence engine (Ollama: {e})"
+        fallback['notice'] = 'Analyzed using the built-in engine because Ollama is unavailable.'
         return fallback

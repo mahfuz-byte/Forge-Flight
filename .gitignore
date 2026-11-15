@@ -36,6 +36,9 @@ backend/.env
 cookies.txt
 testfile.txt
 backend/media/statistics_files/
+backend/staticfiles/
+backend/media/
+.vercel/
 
 # Understand-Anything knowledge graph
 .ua/

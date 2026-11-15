@@ -189,12 +189,13 @@ def extract_pdf_metrics(file_path):
     }
 
 
-def process_uploaded_file(file_path):
-    """Main entrypoint: parses file by extension."""
-    ext = os.path.splitext(file_path)[1].lower()
+def process_uploaded_file(file_source, filename=None):
+    """Parse a local path or an open file, including a cloud-backed file."""
+    name = filename or getattr(file_source, 'name', file_source)
+    ext = os.path.splitext(name)[1].lower()
     if ext == '.csv':
-        return extract_csv_metrics(file_path)
+        return extract_csv_metrics(file_source)
     elif ext == '.pdf':
-        return extract_pdf_metrics(file_path)
+        return extract_pdf_metrics(file_source)
     else:
         raise ValueError(f"Unsupported file format: {ext}. Only .csv and .pdf are supported.")
