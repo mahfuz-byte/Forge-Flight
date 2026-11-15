@@ -1,5 +1,5 @@
 .messages-page { padding: 0; }
-.messages-shell { display: grid; grid-template-columns: 300px 1fr; height: calc(100vh - 58px); }
+.messages-shell { display: grid; grid-template-columns: 300px minmax(0, 1fr); height: calc(100dvh - 58px); min-height: 0; }
 
 .conv-list { border-right: 1px solid var(--border); overflow-y: auto; }
 .conv-list-head { padding: 18px 18px 10px; }
@@ -24,28 +24,37 @@
   min-width: 18px; height: 18px; border-radius: 9px; display: flex; align-items: center; justify-content: center; padding: 0 5px;
 }
 
-.thread-panel { display: flex; flex-direction: column; min-height: 0; }
+.thread-panel { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .thread-head { display: flex; align-items: center; gap: 12px; padding: 12px 20px; border-bottom: 1px solid var(--border); }
 .thread-head b { display: block; font-size: 14px; }
 .thread-head span { font-size: 12px; color: var(--text-faint); }
 .thread-back { display: none; background: none; border: none; color: var(--text-muted); padding: 4px; margin-right: -2px; }
-.thread-body { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
+.thread-body { flex: 1; min-height: 0; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; }
 .bubble-row { display: flex; }
 .bubble-row.me { justify-content: flex-end; }
-.bubble { max-width: 70%; padding: 10px 14px; border-radius: 14px; background: var(--surface); font-size: 13.5px; line-height: 1.5; color: var(--text); }
+.bubble { max-width: 70%; padding: 10px 14px; border-radius: 14px; background: var(--surface); font-size: 13.5px; line-height: 1.5; color: var(--text); overflow-wrap: anywhere; }
 .bubble-row.me .bubble { background: var(--accent); color: var(--text-on-accent); }
 .bubble time { display: block; font-size: 10px; margin-top: 4px; opacity: .65; }
 .thread-compose { display: flex; gap: 10px; padding: 14px 20px; border-top: 1px solid var(--border); }
 .thread-compose input {
-  flex: 1; border: 1px solid var(--border); border-radius: 20px; padding: 10px 16px;
+  flex: 1; min-width: 0; border: 1px solid var(--border); border-radius: 20px; padding: 10px 16px;
   background: var(--surface); font-family: inherit; font-size: 13.5px; color: var(--text);
 }
 .thread-compose input:focus { outline: none; border-color: var(--accent); background: var(--bg-elevated); }
 
 @media (max-width: 780px) {
-  .messages-shell { grid-template-columns: 1fr; }
+  .messages-page { min-height: 0; padding-bottom: 0; }
+  .messages-shell { grid-template-columns: minmax(0, 1fr); height: calc(100dvh - 116px - env(safe-area-inset-bottom)); }
   .thread-panel { display: none; }
   .messages-shell.show-thread .conv-list { display: none; }
   .messages-shell.show-thread .thread-panel { display: flex; }
   .thread-back { display: flex; }
+}
+@media (max-width: 600px) {
+  .messages-shell { height: calc(100dvh - 159px - env(safe-area-inset-bottom)); }
+  .thread-head { padding: 10px 14px; }
+  .thread-body { padding: 14px; }
+  .bubble { max-width: 88%; }
+  .thread-compose { padding: 10px 12px; }
+  .thread-compose input { font-size: 16px; }
 }

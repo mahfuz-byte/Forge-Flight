@@ -6,8 +6,8 @@ import CreateStartupModal from './CreateStartupModal';
 
 const ITEMS = [
   ['home', 'Home', '/feed'],
-  ['compass', 'Explore Startups', '/explore'],
-  ['chart', 'Statistics', '/statistics'],
+  ['compass', 'Explore', '/explore'],
+  ['chart', 'Stats', '/statistics'],
   ['msg', 'Messages', '/messages'],
   ['bell', 'Notifications', '/notifications'],
 ];
@@ -32,9 +32,11 @@ export default function LeftNav() {
           <button
             key={href}
             className={`nav-item${isActive(href) ? ' active' : ''}`}
+            aria-label={label}
             onClick={() => navigate(href)}
           >
-            <Icon name={icon} /><span>{label}</span>
+            <Icon name={icon} /><span className={`nav-label-full${href === '/messages' || href === '/notifications' ? ' nav-label-switch' : ''}`}>{label}</span>
+            {(href === '/messages' || href === '/notifications') && <span className="nav-label-mobile">{href === '/messages' ? 'Inbox' : 'Alerts'}</span>}
             {signedIn && badges[href] > 0 && (
               <span className="nav-badge" aria-label={`${badges[href]} unread`}>{badges[href] > 99 ? '99+' : badges[href]}</span>
             )}
@@ -45,7 +47,7 @@ export default function LeftNav() {
         </button>
         {signedIn && (
           <>
-            <button className="nav-item" onClick={async () => {
+            <button className="nav-item nav-logout" onClick={async () => {
               await logOut();
               navigate('/');
             }}>

@@ -141,6 +141,17 @@
   .admin-topbar { padding: 10px 16px; }
   .admin-content { padding: 18px 16px 40px; }
 }
+@media (max-width: 640px) {
+  .admin-topbar { gap: 6px; padding: 8px 12px; }
+  .admin-topbar .btn { padding: 7px 9px; font-size: 11px; }
+  .admin-role-pill { max-width: 110px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .admin-content { min-width: 0; padding: 16px 12px 32px; }
+  .admin-page, .admin-card, .admin-chart { min-width: 0; }
+  .admin-card { padding: 14px; }
+  .admin-filter { flex: 1 1 100%; }
+  .admin-filter select, .admin-filter input { width: 100%; }
+  .admin-matrix { display: block; overflow-x: auto; white-space: nowrap; }
+}
 
 /* Tables become stacked cards on phones, labelled by column. */
 @media (max-width: 640px) {
