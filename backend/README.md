@@ -51,7 +51,7 @@ Key resources: `/api/startups/` (+ `/save/`, `/unsave/`, `/follow/`, `/unfollow/
 
 Every demo user seeded by `seed_demo` gets the password from `DEMO_PASSWORD`, or defaults to `password123` (e.g. `amara@healthsync.io` owns HealthSync).
 
-To test messaging locally, sign in as a startup owner in one tab and a different account in another tab. The second account can choose the owner under Messages or click **Message founder** on the startup profile. Both participants see the same thread; the Messages page checks for new messages every three seconds. Both the Django backend and PostgreSQL must be running.
+To test messaging locally, sign in as a startup owner in one tab and a different account in another tab. The second account can search for the company or founder under Messages, or click **Message founder** on the startup profile. Use the inbox filter to view all messages, personal conversations, or a startup's inbox. Both participants see the same thread; the Messages page checks for new messages every three seconds. Both the Django backend and PostgreSQL must be running.
 
 ## Security rules worth knowing
 
