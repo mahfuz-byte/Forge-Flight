@@ -122,7 +122,8 @@ class StartupDetailSerializer(serializers.ModelSerializer):
         fields = [
             'slug', 'name', 'initials', 'verified', 'owner', 'founder', 'founder_avatar',
             'tagline', 'status', 'tags', 'goal', 'raised', 'funding_pct',
-            'deadline', 'overview', 'created_at', 'updated_at', 'review_status', 'review_note', 'featured',
+            'deadline', 'overview', 'trade_license', 'tin_number', 'created_at', 'updated_at',
+            'review_status', 'review_note', 'featured',
             'collab', 'team', 'timeline', 'docs', 'updates', 'comments',
         ]
 
@@ -130,9 +131,22 @@ class StartupDetailSerializer(serializers.ModelSerializer):
 class StartupWriteSerializer(serializers.ModelSerializer):
     """What a founder may set. ``raised`` is computed from investments (BE-04)."""
 
+    trade_license = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        default='',
+    )
+    tin_number = serializers.CharField(
+        max_length=100,
+        required=False,
+        allow_blank=True,
+        default='',
+    )
+
     class Meta:
         model = Startup
-        fields = ['name', 'tagline', 'tags', 'goal', 'overview', 'status', 'deadline']
+        fields = ['name', 'tagline', 'tags', 'goal', 'overview', 'status', 'deadline', 'trade_license', 'tin_number']
 
     def validate_goal(self, goal):
         if goal > 1_000_000_000:

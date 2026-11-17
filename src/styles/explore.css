@@ -9,11 +9,7 @@
 }
 .explore-search input:focus { outline: none; border-color: var(--accent); background: var(--bg-elevated); }
 
-.explore-page .filter-row { padding: 18px 0 0; border-bottom: none; }
-.tag-filter-row { display: flex; gap: 8px; flex-wrap: wrap; padding: 10px 0 20px; }
-.tag-filter { padding: 5px 12px; border-radius: 14px; border: 1px solid var(--border); background: none; font-size: 11.5px; font-weight: 600; color: var(--text-faint); font-family: 'IBM Plex Mono'; }
-.tag-filter:hover { border-color: var(--border-strong); color: var(--text-muted); }
-.tag-filter.active { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.explore-page .filter-row { padding: 18px 0 20px; border-bottom: none; }
 
 .explore-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(250px, 100%), 1fr)); gap: 16px; padding-bottom: 20px; }
 .explore-card { border: 1px solid var(--border); border-radius: 10px; padding: 16px; cursor: pointer; background: var(--bg-elevated); transition: border-color .15s, transform .12s, box-shadow .15s; }

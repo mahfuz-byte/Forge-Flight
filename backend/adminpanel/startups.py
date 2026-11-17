@@ -30,7 +30,7 @@ class AdminStartupSerializer(serializers.ModelSerializer):
         fields = [
             'slug', 'name', 'tagline', 'owner', 'owner_name', 'owner_email', 'review_status', 'review_note',
             'reviewed_at', 'reviewed_by_name', 'featured', 'verified', 'status', 'goal', 'raised', 'funding_pct',
-            'created_at', 'open_reports',
+            'trade_license', 'tin_number', 'created_at', 'open_reports',
         ]
 
 

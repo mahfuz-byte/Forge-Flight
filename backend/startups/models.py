@@ -38,12 +38,13 @@ class Startup(models.Model):
     raised = models.PositiveIntegerField(default=0)
     deadline = models.CharField(max_length=60, blank=True, default='Opening soon')
     overview = models.TextField(blank=True)
+    trade_license = models.CharField(max_length=100, blank=True, default='')
+    tin_number = models.CharField(max_length=100, blank=True, default='')
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
-    # Startups created through the API start as pending when SiteSettings.require_startup_approval
-    # is on (see StartupViewSet.create); rows made by staff or scripts default to approved.
-    review_status = models.CharField(max_length=10, choices=REVIEW_CHOICES, default=REVIEW_APPROVED, db_index=True)
+    # Startups created through the API start as pending until approved by an administrator.
+    review_status = models.CharField(max_length=10, choices=REVIEW_CHOICES, default=REVIEW_PENDING, db_index=True)
     review_note = models.CharField(max_length=500, blank=True)
     reviewed_at = models.DateTimeField(null=True, blank=True)
     reviewed_by = models.ForeignKey(

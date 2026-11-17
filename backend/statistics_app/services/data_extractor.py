@@ -199,3 +199,137 @@ def process_uploaded_file(file_source, filename=None):
         return extract_pdf_metrics(file_source)
     else:
         raise ValueError(f"Unsupported file format: {ext}. Only .csv and .pdf are supported.")
+
+
+def aggregate_startup_reports(reports):
+    """
+    Combines one or more published reports for a startup into a unified financial synthesis.
+    Computes total volume, deduplicated / ordered monthly timeline, and historical MoM growth.
+    """
+    if not reports:
+        return {
+            'total_sales': 0.0,
+            'total_costs': 0.0,
+            'net_profit': 0.0,
+            'profit_margin': 0.0,
+            'total_customers': 0,
+            'arpu': 0.0,
+            'top_customers': [],
+            'monthly_timeline': [],
+            'category_breakdown': [],
+            'mom_growth_rate': 0.0,
+            'reports_count': 0,
+        }
+
+    timeline_by_period = {}
+    all_categories = {}
+    all_customers = {}
+    total_sales = 0.0
+    total_costs = 0.0
+    total_customers_sum = 0
+    reports_count = len(reports)
+
+    # Process reports chronologically or latest-first
+    for r in reports:
+        if hasattr(r, 'raw_summary'):
+            raw = r.raw_summary or {}
+        elif isinstance(r, dict):
+            raw = r.get('raw_summary', r) or {}
+        else:
+            raw = {}
+        r_sales = float(raw.get('total_sales', 0.0))
+        r_costs = float(raw.get('total_costs', 0.0))
+        r_cust = int(raw.get('total_customers', 0))
+
+        # Merge timeline
+        for item in raw.get('monthly_timeline', []):
+            period = item.get('period', 'Period')
+            if period not in timeline_by_period:
+                timeline_by_period[period] = {
+                    'period': period,
+                    'sales': float(item.get('sales', 0.0)),
+                    'costs': float(item.get('costs', 0.0)),
+                    'profit': float(item.get('profit', 0.0)),
+                }
+            else:
+                # If already present, keep the largest or update
+                existing = timeline_by_period[period]
+                existing['sales'] = max(existing['sales'], float(item.get('sales', 0.0)))
+                existing['costs'] = max(existing['costs'], float(item.get('costs', 0.0)))
+                existing['profit'] = existing['sales'] - existing['costs']
+
+        # Merge categories
+        for cat in raw.get('category_breakdown', []):
+            name = cat.get('name', 'General')
+            amt = float(cat.get('amount', 0.0))
+            all_categories[name] = all_categories.get(name, 0.0) + amt
+
+        # Merge top customers
+        for cust in raw.get('top_customers', []):
+            name = cust.get('name', 'Unknown')
+            spend = float(cust.get('spend', 0.0))
+            all_customers[name] = all_customers.get(name, 0.0) + spend
+
+    # If timeline exists, derive totals directly from timeline to avoid double counting across reports
+    timeline = list(timeline_by_period.values())
+    if timeline:
+        total_sales = round(sum(m['sales'] for m in timeline), 2)
+        total_costs = round(sum(m['costs'] for m in timeline), 2)
+    else:
+        # Fallback to sum of latest report
+        latest = reports[0]
+        if hasattr(latest, 'raw_summary'):
+            l_raw = latest.raw_summary or {}
+        elif isinstance(latest, dict):
+            l_raw = latest.get('raw_summary', latest) or {}
+        else:
+            l_raw = {}
+        total_sales = float(l_raw.get('total_sales', 0.0))
+        total_costs = float(l_raw.get('total_costs', 0.0))
+
+    net_profit = round(total_sales - total_costs, 2)
+    profit_margin = round((net_profit / total_sales * 100), 2) if total_sales > 0 else 0.0
+
+    # Calculate MoM growth rate across timeline periods
+    mom_rates = []
+    for i in range(1, len(timeline)):
+        prev_s = timeline[i - 1]['sales']
+        curr_s = timeline[i]['sales']
+        if prev_s > 0:
+            rate = ((curr_s - prev_s) / prev_s) * 100
+            mom_rates.append(rate)
+
+    avg_mom_growth = round(sum(mom_rates) / len(mom_rates), 1) if mom_rates else 0.0
+
+    # Sort top customers by spend
+    sorted_customers = sorted(
+        [{'name': k, 'spend': round(v, 2), 'share_pct': round((v / total_sales * 100), 1) if total_sales > 0 else 0}
+         for k, v in all_customers.items()],
+        key=lambda x: x['spend'],
+        reverse=True
+    )[:8]
+
+    # Categories
+    sorted_categories = sorted(
+        [{'name': k, 'amount': round(v, 2)} for k, v in all_categories.items()],
+        key=lambda x: x['amount'],
+        reverse=True
+    )[:6]
+
+    total_customers = len(sorted_customers) or max(1, len(timeline))
+    arpu = round(total_sales / total_customers, 2) if total_customers > 0 else 0.0
+
+    return {
+        'total_sales': total_sales,
+        'total_costs': total_costs,
+        'net_profit': net_profit,
+        'profit_margin': profit_margin,
+        'total_customers': total_customers,
+        'arpu': arpu,
+        'top_customers': sorted_customers,
+        'monthly_timeline': timeline,
+        'category_breakdown': sorted_categories,
+        'mom_growth_rate': avg_mom_growth,
+        'reports_count': reports_count,
+    }
+

@@ -30,16 +30,16 @@ class PostViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
 
     def get_queryset(self):
         from django.db.models import Q
-
+        from startups.models import Startup
         from startups.services import visible_startups_q
 
-        # Posts of startups that aren't public yet are hidden like the startup itself.
-        qs = super().get_queryset().filter(
-            Q(startup__isnull=True) | visible_startups_q(self.request.user, 'startup__'),
-        )
         params = self.request.query_params
+        qs = super().get_queryset()
         if params.get('startup'):
-            qs = qs.filter(startup__slug=params['startup'])
+            qs = qs.filter(startup__slug=params['startup']).filter(visible_startups_q(self.request.user, 'startup__'))
+        else:
+            # In the public feed, never include posts from pending or unapproved startups
+            qs = qs.filter(Q(startup__isnull=True) | Q(startup__review_status=Startup.REVIEW_APPROVED))
         if params.get('has_media'):  # startup gallery (FE-09)
             qs = qs.exclude(media='').exclude(media__isnull=True)
         # A stable order so pages never repeat or skip posts.

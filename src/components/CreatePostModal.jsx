@@ -36,6 +36,8 @@ export default function CreatePostModal() {
     closeCreatePost();
   }
 
+  const approvedStartups = myStartups.filter(([, s]) => s.reviewStatus === 'approved');
+
   if (myStartups.length === 0) {
     return (
       <div className="modal-overlay" onClick={handleClose}>
@@ -56,11 +58,38 @@ export default function CreatePostModal() {
     );
   }
 
-  const activeId = myStartups.some(([sid]) => sid === selectedId) ? selectedId : myStartups[0][0];
-  const startup = myStartups.find(([sid]) => sid === activeId)[1];
+  if (approvedStartups.length === 0) {
+    return (
+      <div className="modal-overlay" onClick={handleClose}>
+        <div className="modal-panel" onClick={(e) => e.stopPropagation()}>
+          <div className="modal-head">
+            <h3>Share a progress update</h3>
+            <button className="icon-btn" onClick={handleClose} aria-label="Close"><Icon name="close" /></button>
+          </div>
+          <div style={{ padding: '14px 16px', background: 'var(--warning-soft)', borderRadius: 8, border: '1px solid var(--warning)', margin: '14px 0', fontSize: 13.5 }}>
+            <b style={{ display: 'block', marginBottom: 4 }}>Startup Verification Required</b>
+            <p style={{ margin: 0, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+              Your startup is currently <b>Pending Admin Approval</b>. Posts, updates, and announcements cannot be created until your startup registration is verified and approved by an administrator.
+            </p>
+          </div>
+          <div className="modal-actions">
+            <button type="button" className="btn btn-outline btn-sm" onClick={handleClose}>Close</button>
+            <button type="button" className="btn btn-accent btn-sm" onClick={() => { handleClose(); navigate('/account'); }}>View Account Status</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const activeId = approvedStartups.some(([sid]) => sid === selectedId) ? selectedId : approvedStartups[0][0];
+  const startup = approvedStartups.find(([sid]) => sid === activeId)[1];
 
   async function handleSubmit(e) {
     e.preventDefault();
+    if (!startup || startup.reviewStatus !== 'approved') {
+      setError('Your startup must be approved by an administrator before publishing updates.');
+      return;
+    }
     if (!title.trim() || !text.trim()) {
       setError('Give your update a title and a short description.');
       return;
@@ -80,7 +109,7 @@ export default function CreatePostModal() {
       navigate('/feed');
     } catch (err) {
       // Surface the server's reason for a rejected attachment (wrong type, too large).
-      const mediaError = err?.data?.media?.[0];
+      const mediaError = err?.data?.media?.[0] || err?.message;
       setError(mediaError || 'Could not publish your update — try again.');
     } finally {
       setBusy(false);
@@ -99,7 +128,7 @@ export default function CreatePostModal() {
           <div className="field">
             <label htmlFor="cp-startup">Posting as</label>
             <select id="cp-startup" value={activeId} onChange={(e) => setSelectedId(e.target.value)}>
-              {myStartups.map(([sid, s]) => <option key={sid} value={sid}>{s.name}</option>)}
+              {approvedStartups.map(([sid, s]) => <option key={sid} value={sid}>{s.name}</option>)}
             </select>
           </div>
         ) : (

@@ -85,6 +85,8 @@ def validate_funding_settings(startup, goal=None, status=None):
     goal = startup.goal if goal is None else goal
     status = startup.status if status is None else status
     if status == 'open':
+        if startup.review_status != Startup.REVIEW_APPROVED:
+            raise BusinessRuleError('Your startup must be approved by an administrator before opening an investment round.', field='status')
         if goal <= 0:
             raise BusinessRuleError('Set a funding goal before opening the round.', field='goal')
         # Lowering the goal of an open round to what's raised is fine: it just completes.
@@ -212,10 +214,13 @@ def save_collaboration(startup, role, body, is_open):
     """Create or update the startup's collaboration listing (BE-07)."""
     role = (role or '').strip()
     body = (body or '').strip()
-    if is_open and not role:
-        raise BusinessRuleError('Give the role a title before publishing it.', field='role')
-    if is_open and not body:
-        raise BusinessRuleError('Describe the role before publishing it.', field='body')
+    if is_open:
+        if startup.review_status != Startup.REVIEW_APPROVED:
+            raise BusinessRuleError('Your startup must be approved by an administrator before opening a collaboration round.', field='is_open')
+        if not role:
+            raise BusinessRuleError('Give the role a title before publishing it.', field='role')
+        if not body:
+            raise BusinessRuleError('Describe the role before publishing it.', field='body')
     collab, _ = CollaborationRole.objects.update_or_create(
         startup=startup, defaults={'role': role[:140], 'body': body, 'is_open': is_open},
     )

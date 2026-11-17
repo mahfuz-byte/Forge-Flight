@@ -7,7 +7,7 @@ import CreateStartupModal from './CreateStartupModal';
 const ITEMS = [
   ['home', 'Home', '/feed'],
   ['compass', 'Explore', '/explore'],
-  ['chart', 'Stats', '/statistics'],
+  ['chart', 'AI Research', '/statistics'],
   ['msg', 'Messages', '/messages'],
   ['bell', 'Notifications', '/notifications'],
 ];

@@ -2,163 +2,153 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Topbar from '../components/Topbar';
 import LeftNav from '../components/LeftNav';
-import CreateStartupModal from '../components/CreateStartupModal';
+import LogoBadge from '../components/LogoBadge';
 import { Icon } from '../components/IconSprite';
 import { useApp } from '../context/AppContext';
-import { api } from '../api/client';
+import { api, mediaUrl } from '../api/client';
 import '../styles/settings.css';
 import '../styles/statistics.css';
 
 export default function Statistics() {
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const { signedIn, myStartups, currentUser } = useApp();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { startups } = useApp();
 
-  const [createModalOpen, setCreateModalOpen] = useState(false);
   const [selectedSlug, setSelectedSlug] = useState('');
-  const [reports, setReports] = useState([]);
-  const [activeReport, setActiveReport] = useState(null);
-  const [loadingReports, setLoadingReports] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
+  const [searchDropdownOpen, setSearchDropdownOpen] = useState(false);
 
-  const [fileToUpload, setFileToUpload] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [researchData, setResearchData] = useState(null);
+  const [loadingResearch, setLoadingResearch] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
-  const [dragOver, setDragOver] = useState(false);
 
-  const fileInputRef = useRef(null);
+  const searchBoxRef = useRef(null);
 
-  // Initialize selected startup from query param or first owned startup
+  // Initialize selected startup from query param or first available startup
   useEffect(() => {
-    if (myStartups.length > 0) {
-      const paramSlug = searchParams.get('startup');
-      const found = myStartups.find(([slug]) => slug === paramSlug);
-      if (found) {
-        setSelectedSlug(found[0]);
-      } else if (!selectedSlug) {
-        setSelectedSlug(myStartups[0][0]);
+    const paramSlug = searchParams.get('startup') || searchParams.get('company');
+    if (paramSlug) {
+      setSelectedSlug(paramSlug);
+    } else {
+      const startupKeys = Object.keys(startups || {});
+      if (startupKeys.length > 0 && !selectedSlug) {
+        setSelectedSlug(startupKeys[0]);
       }
     }
-  }, [myStartups, searchParams, selectedSlug]);
+  }, [searchParams, startups, selectedSlug]);
 
-  // Load existing reports for selected startup
+  // Debounced live company search
   useEffect(() => {
-    if (!signedIn || !selectedSlug) return;
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      return;
+    }
+    const timer = setTimeout(() => {
+      api.get(`/statistics/search-companies/?q=${encodeURIComponent(searchQuery.trim())}`)
+        .then((data) => {
+          setSearchResults(Array.isArray(data) ? data : []);
+        })
+        .catch(() => {
+          setSearchResults([]);
+        });
+    }, 200);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Close search dropdown on click outside
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (searchBoxRef.current && !searchBoxRef.current.contains(e.target)) {
+        setSearchDropdownOpen(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Fetch company research dossier when selectedSlug changes
+  useEffect(() => {
+    if (!selectedSlug) return;
     let isMounted = true;
-    setLoadingReports(true);
+    setLoadingResearch(true);
     setErrorMessage('');
 
-    api.get(`/statistics/?startup=${selectedSlug}`)
+    api.get(`/statistics/research/?startup=${encodeURIComponent(selectedSlug)}`)
       .then((data) => {
         if (!isMounted) return;
-        const list = Array.isArray(data) ? data : data.results || [];
-        setReports(list);
-        if (list.length > 0) {
-          setActiveReport(list[0]);
-        } else {
-          setActiveReport(null);
-        }
+        setResearchData(data);
       })
       .catch((err) => {
         if (!isMounted) return;
-        setErrorMessage(err.message || 'Could not load statistics history.');
+        setErrorMessage(err.message || 'Could not load company research data.');
+        setResearchData(null);
       })
       .finally(() => {
-        if (isMounted) setLoadingReports(false);
+        if (isMounted) setLoadingResearch(false);
       });
 
     return () => { isMounted = false; };
-  }, [signedIn, selectedSlug]);
+  }, [selectedSlug]);
 
-  const selectedStartup = useMemo(() => {
-    const s = myStartups.find(([slug]) => slug === selectedSlug);
-    return s ? s[1] : null;
-  }, [myStartups, selectedSlug]);
-
-  // Handle file drop & selection
-  function handleFileDrop(e) {
-    e.preventDefault();
-    setDragOver(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      validateAndSetFile(e.dataTransfer.files[0]);
-    }
+  function handleSelectCompany(slug, name) {
+    setSelectedSlug(slug);
+    setSearchParams({ startup: slug });
+    setSearchQuery(name);
+    setSearchDropdownOpen(false);
   }
 
-  function handleFileInput(e) {
-    if (e.target.files && e.target.files[0]) {
-      validateAndSetFile(e.target.files[0]);
-    }
-  }
-
-  function validateAndSetFile(f) {
-    const ext = f.name.split('.').pop().toLowerCase();
-    if (ext !== 'csv' && ext !== 'pdf') {
-      setErrorMessage('Please upload a valid CSV (.csv) or PDF (.pdf) file.');
-      return;
-    }
-    if (f.size > 10 * 1024 * 1024) {
-      setErrorMessage('File size exceeds 10 MB limit.');
-      return;
-    }
-    setErrorMessage('');
-    setFileToUpload(f);
-  }
-
-  // Upload file & compute baseline
-  async function handleUpload() {
-    if (!fileToUpload || !selectedSlug) return;
-    setUploading(true);
-    setErrorMessage('');
-
-    const formData = new FormData();
-    formData.append('file', fileToUpload);
-    formData.append('startup_slug', selectedSlug);
-
-    try {
-      const created = await api.post('/statistics/', formData);
-      setReports((prev) => [created, ...prev]);
-      setActiveReport(created);
-      setFileToUpload(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    } catch (err) {
-      setErrorMessage(err.message || 'Failed to upload and parse file.');
-    } finally {
-      setUploading(false);
-    }
-  }
-
-  // Trigger DeepSeek AI Analysis
-  async function handleAnalyze() {
-    if (!activeReport) return;
+  // Trigger / Re-run DeepSeek AI Analysis on all published data
+  async function handleRefreshAnalysis() {
+    if (!selectedSlug) return;
     setAnalyzing(true);
     setErrorMessage('');
 
     try {
-      const updated = await api.post(`/statistics/${activeReport.id}/analyze/`);
-      setActiveReport(updated);
-      setReports((prev) => prev.map((r) => (r.id === updated.id ? updated : r)));
+      const updated = await api.post('/statistics/research/', { startup: selectedSlug });
+      setResearchData(updated);
     } catch (err) {
-      setErrorMessage(err.message || 'AI analysis request failed.');
+      setErrorMessage(err.message || 'AI valuation and projection request failed.');
     } finally {
       setAnalyzing(false);
     }
   }
 
-  function handleDownloadSample() {
-    window.open('/api/statistics/sample-csv/', '_blank');
-  }
+  const startupInfo = researchData?.startup || (startups && startups[selectedSlug]);
+  const verdict = researchData?.verdict || {};
+  const raw = researchData?.aggregated_summary || {};
+  const publishedReports = researchData?.published_reports || [];
 
-  // Summary figures
-  const raw = activeReport?.raw_summary || {};
-  const ai = activeReport?.ai_analysis || null;
-  const isCompleted = activeReport?.status === 'completed' && Boolean(ai);
+  // Combine historical and future projection periods for unified visualization
+  const combinedTimeline = useMemo(() => {
+    const historical = (raw?.monthly_timeline || []).map((m) => ({
+      period: m.period || m.month,
+      sales: m.sales || 0,
+      costs: m.costs || 0,
+      profit: m.profit || 0,
+      isForecast: false,
+    }));
 
-  // Maximum value for monthly chart scaling
-  const monthlyTimeline = raw.monthly_timeline || [];
-  const maxMonthlyVal = Math.max(
-    ...monthlyTimeline.map((m) => Math.max(m.sales || 0, m.costs || 0)),
-    100
-  );
+    const forecast = (verdict?.future_projections || []).map((f) => ({
+      period: f.period,
+      sales: f.sales || 0,
+      costs: f.costs || 0,
+      profit: f.profit || 0,
+      isForecast: true,
+    }));
+
+    return [...historical, ...forecast];
+  }, [raw?.monthly_timeline, verdict?.future_projections]);
+
+  const maxVal = useMemo(() => {
+    if (!combinedTimeline.length) return 100;
+    return Math.max(
+      ...combinedTimeline.map((item) => Math.max(item.sales || 0, item.costs || 0)),
+      100
+    );
+  }, [combinedTimeline]);
 
   return (
     <div>
@@ -166,466 +156,509 @@ export default function Statistics() {
       <div className="layout layout-2col">
         <LeftNav />
         <main className="center-col stats-page">
-          {/* Header Card */}
+          {/* Header Card with Universal Company Search */}
           <div className="stats-header-card">
             <div className="stats-header-titles">
               <h2>
                 <Icon name="chart" />
-                Startup Statistics &amp; AI Intelligence
+                AI Company Research &amp; Projections
               </h2>
               <p>
-                Powered by DeepSeek AI · Automatic unit economics, customer analytics &amp; strategic roadmap
+                DeepSeek AI Valuation · Forward Projections · Growth Trajectory &amp; Verdict
               </p>
             </div>
 
-            {myStartups.length > 0 && (
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <label htmlFor="startup-select" style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                  Startup:
-                </label>
-                <select
-                  id="startup-select"
-                  className="stats-startup-select"
-                  value={selectedSlug}
-                  onChange={(e) => setSelectedSlug(e.target.value)}
-                >
-                  {myStartups.map(([slug, s]) => (
-                    <option key={slug} value={slug}>
-                      {s.name}
-                    </option>
+            {/* Live Autocomplete Company Search Bar */}
+            <div className="research-search-wrapper" ref={searchBoxRef}>
+              <div style={{ position: 'relative' }}>
+                <span className="research-search-icon">
+                  <Icon name="compass" />
+                </span>
+                <input
+                  type="text"
+                  className="research-search-input"
+                  placeholder="Search any company (e.g. HealthSync, Pathao)..."
+                  value={searchQuery}
+                  onChange={(e) => {
+                    setSearchQuery(e.target.value);
+                    setSearchDropdownOpen(true);
+                  }}
+                  onFocus={() => setSearchDropdownOpen(true)}
+                />
+              </div>
+
+              {searchDropdownOpen && searchResults.length > 0 && (
+                <div className="research-dropdown">
+                  {searchResults.map((item) => (
+                    <div
+                      key={item.slug}
+                      className="research-dropdown-item"
+                      onClick={() => handleSelectCompany(item.slug, item.name)}
+                    >
+                      <div>
+                        <b style={{ fontSize: 14 }}>{item.name}</b>
+                        <p style={{ margin: '2px 0 0', fontSize: 12, color: 'var(--text-muted)' }}>
+                          {item.tagline || item.slug}
+                        </p>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        {item.has_reports ? (
+                          <span className="badge badge-accent" style={{ fontSize: 11 }}>
+                            {item.reports_count} Published File{item.reports_count === 1 ? '' : 's'}
+                          </span>
+                        ) : (
+                          <span style={{ fontSize: 11, color: 'var(--text-faint)' }}>Registered</span>
+                        )}
+                      </div>
+                    </div>
                   ))}
-                </select>
-              </div>
-            )}
-          </div>
-
-          {/* Case 1: Not Logged In */}
-          {!signedIn ? (
-            <div className="founder-gate-card">
-              <div className="founder-gate-icon">
-                <Icon name="user" />
-              </div>
-              <h3>Sign in to Access Founder Statistics</h3>
-              <p>
-                Access to AI-powered sales calculation, customer cohort analysis, and interactive charts is
-                available for startup founders.
-              </p>
-              <button className="btn btn-accent" onClick={() => navigate('/login')}>
-                Sign in to your account
-              </button>
-            </div>
-          ) : myStartups.length === 0 ? (
-            /* Case 2: Logged In, but 0 Startups Created (Founder Gate) */
-            <div className="founder-gate-card">
-              <div className="founder-gate-icon">
-                <Icon name="flag" />
-              </div>
-              <h3>Exclusive to Startup Founders</h3>
-              <p>
-                The Statistics &amp; AI Intelligence feature is dedicated to creators and founders on Forge &amp; Flight.
-                Once you create a startup, you can upload sales transactions, customer metrics, and operating costings
-                to generate interactive growth charts and DeepSeek AI strategic evaluations.
-              </p>
-              <button className="btn btn-accent" onClick={() => setCreateModalOpen(true)}>
-                <Icon name="flag" />
-                Create your first startup
-              </button>
-            </div>
-          ) : (
-            /* Case 3: Founder with Startups */
-            <>
-              {errorMessage && (
-                <div className="modal-error" style={{ marginBottom: 20 }}>
-                  <Icon name="close" /> {errorMessage}
                 </div>
               )}
+            </div>
+          </div>
 
-              {/* Upload Card */}
-              <div className="stats-upload-card">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
-                  <h4 style={{ margin: 0, fontSize: 16 }}>Upload Financial &amp; Customer Records</h4>
-                  <button
-                    type="button"
-                    className="btn btn-outline btn-sm"
-                    onClick={handleDownloadSample}
-                    title="Download template CSV with sales, customer names, and costings"
-                  >
-                    <Icon name="doc" /> Download Sample CSV
-                  </button>
-                </div>
+          {errorMessage && (
+            <div className="modal-error" style={{ marginBottom: 20 }}>
+              <Icon name="close" /> {errorMessage}
+            </div>
+          )}
 
-                <div
-                  className={`upload-dropzone${dragOver ? ' dragover' : ''}`}
-                  onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
-                  onDragLeave={() => setDragOver(false)}
-                  onDrop={handleFileDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".csv,.pdf"
-                    style={{ display: 'none' }}
-                    onChange={handleFileInput}
-                  />
-                  <div className="upload-dropzone-icon">
-                    <Icon name="doc" />
+          {/* Company Context Bar */}
+          {startupInfo && (
+            <div className="settings-card" style={{ padding: '16px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                <LogoBadge id={startupInfo.slug} initials={startupInfo.initials} size={48} />
+                <div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <h3 style={{ margin: 0, fontSize: 18 }}>
+                      {startupInfo.name}
+                    </h3>
+                    {startupInfo.verified && (
+                      <span title="Verified Startup" style={{ color: 'var(--accent)', display: 'inline-flex' }}>
+                        <Icon name="check" />
+                      </span>
+                    )}
+                    {startupInfo.status && (
+                      <span className={`status-pill status-${startupInfo.status}`}>
+                        {startupInfo.status === 'open' ? 'Funding Open' : startupInfo.status}
+                      </span>
+                    )}
                   </div>
-                  <b style={{ display: 'block', fontSize: 15, marginBottom: 4 }}>
-                    {fileToUpload ? fileToUpload.name : 'Choose a CSV spreadsheet or PDF report'}
-                  </b>
-                  <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                    {fileToUpload
-                      ? `${(fileToUpload.size / 1024).toFixed(1)} KB · Ready to calculate`
-                      : 'Drag & drop here or click to browse (Max 10 MB)'}
+                  <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--text-muted)' }}>
+                    {startupInfo.tagline || 'Startup on Forge & Flight'} · {publishedReports.length} Published Financial File{publishedReports.length === 1 ? '' : 's'}
+                  </p>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
+                  onClick={() => navigate(`/profile/${startupInfo.slug}`)}
+                >
+                  <Icon name="compass" /> View Profile
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-accent btn-sm"
+                  disabled={analyzing}
+                  onClick={handleRefreshAnalysis}
+                >
+                  <Icon name="sparkle" /> {analyzing ? 'Reasoning with DeepSeek…' : 'Run DeepSeek AI Verdict'}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Loading Research State */}
+          {loadingResearch && (
+            <div className="stats-ai-card ai-spinner-container">
+              <div className="ai-pulse-orb" />
+              <h4 style={{ margin: '0 0 6px', fontSize: 18 }}>Loading Business Intelligence &amp; Statistics…</h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0, maxWidth: 460 }}>
+                Synthesizing published CSV spreadsheets, calculating unit economics, and loading forward projections…
+              </p>
+            </div>
+          )}
+
+          {/* AI Analyzing State */}
+          {analyzing && (
+            <div className="stats-ai-card ai-spinner-container">
+              <div className="ai-pulse-orb" />
+              <h4 style={{ margin: '0 0 6px', fontSize: 18 }}>DeepSeek is Formulating Investment Verdict…</h4>
+              <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0, maxWidth: 460 }}>
+                Modeling future projections, assessing valuation multiples, and computing business growth trajectories…
+              </p>
+            </div>
+          )}
+
+          {!loadingResearch && !analyzing && researchData && (
+            <>
+              {/* Top AI Scorecard Grid: Valuation, Growth %, and Verdict */}
+              <div className="verdict-hero-grid">
+                {/* 1. Valuation Estimate Tile */}
+                <div className="verdict-tile">
+                  <span className="verdict-tile-label">AI Valuation Estimate</span>
+                  <span className="verdict-tile-value">
+                    ${(verdict.valuation_low || 0).toLocaleString()} – ${(verdict.valuation_high || 0).toLocaleString()}
+                  </span>
+                  <span className="verdict-tile-sub">
+                    Multiple: <b>{verdict.valuation_multiple || '4.0x - 6.5x ARR'}</b>
                   </span>
                 </div>
 
-                <div className="upload-actions">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    {fileToUpload && (
-                      <span className="file-pill">
-                        <Icon name="check" /> {fileToUpload.name}
-                      </span>
-                    )}
-                    {reports.length > 0 && (
-                      <span style={{ fontSize: 13, color: 'var(--text-muted)' }}>
-                        {reports.length} report{reports.length > 1 ? 's' : ''} on record
-                      </span>
-                    )}
-                  </div>
+                {/* 2. Business Growth Percentage */}
+                <div className="verdict-tile">
+                  <span className="verdict-tile-label">Business Growth Rate</span>
+                  <span className="verdict-tile-value" style={{ color: '#10b981' }}>
+                    +{verdict.projected_annual_growth || 35.0}% <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-muted)' }}>YoY Projected</span>
+                  </span>
+                  <span className="verdict-tile-sub">
+                    Historical: <b>+{verdict.historical_mom_growth || raw.mom_growth_rate || 0}% MoM</b> · {verdict.growth_stage || 'Early Scale'}
+                  </span>
+                </div>
 
-                  <div style={{ display: 'flex', gap: 10 }}>
-                    {fileToUpload && (
-                      <button
-                        type="button"
-                        className="btn btn-accent btn-sm"
-                        disabled={uploading}
-                        onClick={handleUpload}
-                      >
-                        {uploading ? 'Processing Data…' : 'Upload & Compute Baseline'}
-                      </button>
-                    )}
+                {/* 3. Investment Verdict & Health Score */}
+                <div className="verdict-tile">
+                  <span className="verdict-tile-label">Investment Verdict</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 2 }}>
+                    <div className="health-score-circle" style={{ width: 44, height: 44, fontSize: 17, borderColor: (verdict.health_score || 75) >= 75 ? '#10b981' : '#f59e0b', color: (verdict.health_score || 75) >= 75 ? '#10b981' : '#f59e0b' }}>
+                      {verdict.health_score || 75}
+                    </div>
+                    <div>
+                      <b style={{ fontSize: 14, color: 'var(--text)', display: 'block' }}>
+                        {verdict.investment_verdict || 'Promising Trajectory'}
+                      </b>
+                      <span style={{ fontSize: 11.5, color: 'var(--text-muted)' }}>Health Grade</span>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Data & AI Analytics Section */}
-              {activeReport && (
-                <>
-                  {/* KPI Cards Grid */}
-                  <div className="stats-kpi-grid">
-                    <div className="kpi-tile">
-                      <span className="kpi-label">Total Revenue</span>
-                      <span className="kpi-value">${(raw.total_sales || 0).toLocaleString()}</span>
-                      <span className="kpi-sub">Total sales volume</span>
-                    </div>
+              {/* Verified Baseline Financial Metrics */}
+              <div className="stats-kpi-grid">
+                <div className="kpi-tile">
+                  <span className="kpi-label">Recorded Revenue</span>
+                  <span className="kpi-value">${(raw.total_sales || 0).toLocaleString()}</span>
+                  <span className="kpi-sub">Total published sales</span>
+                </div>
 
-                    <div className="kpi-tile">
-                      <span className="kpi-label">Total Costs</span>
-                      <span className="kpi-value">${(raw.total_costs || 0).toLocaleString()}</span>
-                      <span className="kpi-sub">Operating expenditures</span>
-                    </div>
+                <div className="kpi-tile">
+                  <span className="kpi-label">Operating Expenses</span>
+                  <span className="kpi-value">${(raw.total_costs || 0).toLocaleString()}</span>
+                  <span className="kpi-sub">Expenditures on record</span>
+                </div>
 
-                    <div className="kpi-tile">
-                      <span className="kpi-label">Net Profit</span>
-                      <span className={`kpi-value ${(raw.net_profit || 0) >= 0 ? 'kpi-positive' : 'kpi-negative'}`}>
-                        ${(raw.net_profit || 0).toLocaleString()}
-                      </span>
-                      <span className="kpi-sub">Net bottom line</span>
-                    </div>
+                <div className="kpi-tile">
+                  <span className="kpi-label">Net Profit / Income</span>
+                  <span className={`kpi-value ${(raw.net_profit || 0) >= 0 ? 'kpi-positive' : 'kpi-negative'}`}>
+                    ${(raw.net_profit || 0).toLocaleString()}
+                  </span>
+                  <span className="kpi-sub">Bottom line margin</span>
+                </div>
 
-                    <div className="kpi-tile">
-                      <span className="kpi-label">Profit Margin</span>
-                      <span className={`kpi-value ${(raw.profit_margin || 0) >= 0 ? 'kpi-positive' : 'kpi-negative'}`}>
-                        {raw.profit_margin || 0}%
-                      </span>
-                      <span className="kpi-sub">Gross margin ratio</span>
-                    </div>
+                <div className="kpi-tile">
+                  <span className="kpi-label">Profit Margin</span>
+                  <span className={`kpi-value ${(raw.profit_margin || 0) >= 0 ? 'kpi-positive' : 'kpi-negative'}`}>
+                    {raw.profit_margin || 0}%
+                  </span>
+                  <span className="kpi-sub">Gross margin ratio</span>
+                </div>
 
-                    <div className="kpi-tile">
-                      <span className="kpi-label">Active Customers</span>
-                      <span className="kpi-value">{raw.total_customers || 0}</span>
-                      <span className="kpi-sub">Unique accounts</span>
-                    </div>
+                <div className="kpi-tile">
+                  <span className="kpi-label">Customer Accounts</span>
+                  <span className="kpi-value">{raw.total_customers || 0}</span>
+                  <span className="kpi-sub">Unique buyers</span>
+                </div>
 
-                    <div className="kpi-tile">
-                      <span className="kpi-label">Avg Rev / Customer</span>
-                      <span className="kpi-value">${(raw.arpu || 0).toLocaleString()}</span>
-                      <span className="kpi-sub">ARPU</span>
-                    </div>
+                <div className="kpi-tile">
+                  <span className="kpi-label">ARPU</span>
+                  <span className="kpi-value">${(raw.arpu || 0).toLocaleString()}</span>
+                  <span className="kpi-sub">Avg revenue / user</span>
+                </div>
+              </div>
+
+              {/* AI Strategic Verdict & Executive Reasoning Card */}
+              <div className="stats-ai-card">
+                <div className="ai-header">
+                  <div>
+                    <span className="ai-brand-badge">
+                      <Icon name="sparkle" /> DeepSeek Strategic Report
+                    </span>
+                    <h3 style={{ margin: '8px 0 0', fontSize: 20 }}>
+                      {startupInfo?.name} Strategic Verdict &amp; Valuation
+                    </h3>
                   </div>
 
-                  {/* Analyze Callout (If not yet analyzed) */}
-                  {!isCompleted && !analyzing && (
-                    <div className="stats-ai-card" style={{ textAlign: 'center', padding: '32px 24px' }}>
-                      <span className="ai-brand-badge" style={{ marginBottom: 12 }}>
-                        DeepSeek Reasoning Engine
-                      </span>
-                      <h3 style={{ margin: '8px 0 10px', fontSize: 20 }}>
-                        Ready for Strategic AI Business Evaluation
-                      </h3>
-                      <p style={{ color: 'var(--text-muted)', maxWidth: 560, margin: '0 auto 20px', fontSize: 14 }}>
-                        DeepSeek will analyze your sales concentration, assess profitability ratios, identify operational bottlenecks, and formulate an actionable scaling strategy.
-                      </p>
-                      <button
-                        type="button"
-                        className="btn btn-accent"
-                        style={{ padding: '10px 24px', fontSize: 15 }}
-                        onClick={handleAnalyze}
-                      >
-                        <Icon name="bolt" /> Analyze {selectedStartup?.name || 'Startup'} with DeepSeek AI
-                      </button>
+                  <div className="health-score-dial">
+                    <div className="health-score-circle">
+                      {verdict.health_score || 75}
                     </div>
-                  )}
-
-                  {/* AI Analyzing State */}
-                  {analyzing && (
-                    <div className="stats-ai-card ai-spinner-container">
-                      <div className="ai-pulse-orb" />
-                      <h4 style={{ margin: '0 0 6px', fontSize: 18 }}>DeepSeek is Analyzing Business Performance…</h4>
-                      <p style={{ color: 'var(--text-muted)', fontSize: 13, margin: 0, maxWidth: 460 }}>
-                        Synthesizing unit economics, evaluating customer concentration risks, and calculating health scores…
-                      </p>
+                    <div className="health-score-meta">
+                      <b>Health Score</b>
+                      <span>{verdict.investment_verdict || 'Solid Trajectory'}</span>
                     </div>
-                  )}
-
-                  {/* DeepSeek Strategic Analysis Output */}
-                  {isCompleted && (
-                    <div className="stats-ai-card">
-                      <div className="ai-header">
-                        <div>
-                          <span className="ai-brand-badge">DeepSeek AI Strategic Report</span>
-                          <h3 style={{ margin: '8px 0 0', fontSize: 20 }}>
-                            {selectedStartup?.name} Business Evaluation
-                          </h3>
-                        </div>
-
-                        <div className="health-score-dial">
-                          <div className="health-score-circle">
-                            {ai.health_score || 75}
-                          </div>
-                          <div className="health-score-meta">
-                            <b>Health Score</b>
-                            <span>{ai.health_status || 'Solid Trajectory'}</span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {ai.executive_summary && (
-                        <div className="ai-executive-summary">
-                          <b>Executive Summary:</b> {ai.executive_summary}
-                        </div>
-                      )}
-
-                      <div className="ai-insights-grid">
-                        {ai.key_strengths && ai.key_strengths.length > 0 && (
-                          <div className="ai-insights-box">
-                            <h4>
-                              <Icon name="check" style={{ color: '#10b981' }} />
-                              Key Business Strengths
-                            </h4>
-                            <ul className="ai-list strengths">
-                              {ai.key_strengths.map((str, idx) => (
-                                <li key={idx}>{str}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-
-                        {ai.critical_risks && ai.critical_risks.length > 0 && (
-                          <div className="ai-insights-box">
-                            <h4>
-                              <Icon name="bell" style={{ color: '#f59e0b' }} />
-                              Critical Risks &amp; Bottlenecks
-                            </h4>
-                            <ul className="ai-list risks">
-                              {ai.critical_risks.map((risk, idx) => (
-                                <li key={idx}>{risk}</li>
-                              ))}
-                            </ul>
-                          </div>
-                        )}
-                      </div>
-
-                      {ai.actionable_recommendations && ai.actionable_recommendations.length > 0 && (
-                        <div className="recommendations-box">
-                          <h4>Actionable Strategic Recommendations</h4>
-                          {ai.actionable_recommendations.map((rec, idx) => (
-                            <div className="rec-item" key={idx}>
-                              <span
-                                className={`rec-priority priority-${(rec.priority || 'medium').toLowerCase()}`}
-                              >
-                                {rec.priority || 'Medium'}
-                              </span>
-                              <div className="rec-content">
-                                <b>{rec.title}</b>
-                                <p>{rec.description}</p>
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  )}
-
-                  {/* Interactive Visual Charts Grid */}
-                  <div className="charts-grid">
-                    {/* Chart 1: Revenue vs Costs Timeline */}
-                    <div className="chart-card">
-                      <h4>Revenue vs. Operating Costs</h4>
-                      <p className="chart-subtitle">Monthly cash flow and margin progression</p>
-
-                      {monthlyTimeline.length > 0 ? (
-                        <>
-                          <div className="interactive-bar-chart">
-                            {monthlyTimeline.map((item, idx) => {
-                              const sHeight = Math.round(((item.sales || 0) / maxMonthlyVal) * 100);
-                              const cHeight = Math.round(((item.costs || 0) / maxMonthlyVal) * 100);
-                              return (
-                                <div
-                                  className="bar-group"
-                                  key={idx}
-                                  title={`${item.period}\nSales: $${(item.sales || 0).toLocaleString()}\nCosts: $${(item.costs || 0).toLocaleString()}\nProfit: $${(item.profit || 0).toLocaleString()}`}
-                                >
-                                  <div className="bars-wrapper">
-                                    <div
-                                      className="bar-stem bar-sales"
-                                      style={{ height: `${Math.max(4, sHeight)}%` }}
-                                    />
-                                    <div
-                                      className="bar-stem bar-costs"
-                                      style={{ height: `${Math.max(4, cHeight)}%` }}
-                                    />
-                                  </div>
-                                  <span className="bar-label-text">{item.period}</span>
-                                </div>
-                              );
-                            })}
-                          </div>
-
-                          <div className="chart-legend">
-                            <div className="legend-item">
-                              <span className="legend-color" style={{ background: 'var(--accent)' }} />
-                              <span>Revenue ($)</span>
-                            </div>
-                            <div className="legend-item">
-                              <span className="legend-color" style={{ background: '#f43f5e' }} />
-                              <span>Cost ($)</span>
-                            </div>
-                          </div>
-                        </>
-                      ) : (
-                        <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', textAlign: 'center' }}>
-                          Upload a CSV with dates to generate monthly cash flow progression.
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Chart 2: Top Customers Leaderboard */}
-                    <div className="chart-card">
-                      <h4>Top Customers by Spend</h4>
-                      <p className="chart-subtitle">Customer revenue share &amp; concentration</p>
-
-                      {raw.top_customers && raw.top_customers.length > 0 ? (
-                        <div className="customer-leaderboard">
-                          {raw.top_customers.map((cust, idx) => (
-                            <div className="customer-row" key={idx}>
-                              <div className="customer-meta">
-                                <span className="customer-name">{cust.name}</span>
-                                <span className="customer-spend">
-                                  ${cust.spend.toLocaleString()} ({cust.share_pct}%)
-                                </span>
-                              </div>
-                              <div className="customer-track">
-                                <div
-                                  className="customer-fill"
-                                  style={{ width: `${Math.min(100, Math.max(8, cust.share_pct * 2))}%` }}
-                                />
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', textAlign: 'center' }}>
-                          No customer breakdown detected in the uploaded file.
-                        </p>
-                      )}
-                    </div>
-
-                    {/* Chart 3: Cost Structure Categories */}
-                    {raw.category_breakdown && raw.category_breakdown.length > 0 && (
-                      <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
-                        <h4>Cost Structure Breakdown</h4>
-                        <p className="chart-subtitle">Expenditures by category</p>
-                        <div className="category-bars">
-                          {raw.category_breakdown.map((cat, idx) => {
-                            const pct = raw.total_costs > 0
-                              ? Math.round((cat.amount / raw.total_costs) * 100)
-                              : 0;
-                            return (
-                              <div className="customer-row" key={idx}>
-                                <div className="customer-meta">
-                                  <span className="customer-name">{cat.name}</span>
-                                  <span className="customer-spend">
-                                    ${cat.amount.toLocaleString()} ({pct}%)
-                                  </span>
-                                </div>
-                                <div className="customer-track">
-                                  <div
-                                    className="customer-fill"
-                                    style={{
-                                      width: `${Math.min(100, Math.max(5, pct))}%`,
-                                      background: 'linear-gradient(90deg, #f43f5e 0%, #f59e0b 100%)',
-                                    }}
-                                  />
-                                </div>
-                              </div>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    )}
                   </div>
+                </div>
 
-                  {/* Raw Data Preview Table */}
-                  {raw.preview_rows && raw.preview_rows.length > 0 && (
-                    <div className="chart-card" style={{ marginTop: 20 }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                        <h4 style={{ margin: 0 }}>Uploaded Data Sample</h4>
-                        <span style={{ fontSize: 12, color: 'var(--text-muted)' }}>
-                          Showing first {raw.preview_rows.length} rows of {raw.rows_count} total records
+                {verdict.executive_summary && (
+                  <div className="ai-executive-summary">
+                    <b>Executive Verdict:</b> {verdict.executive_summary}
+                  </div>
+                )}
+
+                {verdict.valuation_rationale && (
+                  <div style={{ padding: '12px 16px', background: 'var(--bg)', borderRadius: 'var(--radius-md)', border: '1px solid var(--border)', marginBottom: 20, fontSize: 13.5 }}>
+                    <b style={{ color: 'var(--accent)' }}>Valuation Methodology &amp; Multiples: </b>
+                    {verdict.valuation_rationale}
+                  </div>
+                )}
+
+                <div className="ai-insights-grid">
+                  {verdict.key_strengths && verdict.key_strengths.length > 0 && (
+                    <div className="ai-insights-box">
+                      <h4>
+                        <Icon name="check" style={{ color: '#10b981' }} />
+                        Key Catalysts &amp; Business Strengths
+                      </h4>
+                      <ul className="ai-list strengths">
+                        {verdict.key_strengths.map((str, idx) => (
+                          <li key={idx}>{str}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+
+                  {verdict.critical_risks && verdict.critical_risks.length > 0 && (
+                    <div className="ai-insights-box">
+                      <h4>
+                        <Icon name="bell" style={{ color: '#f59e0b' }} />
+                        Critical Bottlenecks &amp; Investment Risks
+                      </h4>
+                      <ul className="ai-list risks">
+                        {verdict.critical_risks.map((risk, idx) => (
+                          <li key={idx}>{risk}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
+
+                {verdict.actionable_recommendations && verdict.actionable_recommendations.length > 0 && (
+                  <div className="recommendations-box">
+                    <h4>Actionable Growth &amp; Scaling Recommendations</h4>
+                    {verdict.actionable_recommendations.map((rec, idx) => (
+                      <div className="rec-item" key={idx}>
+                        <span className={`rec-priority priority-${(rec.priority || 'medium').toLowerCase()}`}>
+                          {rec.priority || 'Medium'}
                         </span>
+                        <div className="rec-content">
+                          <b>{rec.title}</b>
+                          <p>{rec.description}</p>
+                        </div>
                       </div>
-                      <div className="data-preview-table-wrapper">
-                        <table className="data-preview-table">
-                          <thead>
-                            <tr>
-                              {raw.columns.map((c, i) => (
-                                <th key={i}>{c}</th>
-                              ))}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {raw.preview_rows.map((row, rIdx) => (
-                              <tr key={rIdx}>
-                                {raw.columns.map((c, cIdx) => (
-                                  <td key={cIdx}>{row[c] !== undefined ? String(row[c]) : ''}</td>
-                                ))}
-                              </tr>
-                            ))}
-                          </tbody>
-                        </table>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Interactive Visual Charts: Historical Actuals + AI Future Projections */}
+              <div className="charts-grid">
+                {/* Unified Timeline Chart */}
+                <div className="chart-card" style={{ gridColumn: '1 / -1' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12, flexWrap: 'wrap', gap: 10 }}>
+                    <div>
+                      <h4 style={{ margin: 0 }}>Historical Cash Flow &amp; AI Future Projections</h4>
+                      <p className="chart-subtitle" style={{ margin: '2px 0 0' }}>
+                        Solid bars represent published historical actuals; dashed columns represent DeepSeek forward projections
+                      </p>
+                    </div>
+
+                    <div className="chart-legend" style={{ margin: 0 }}>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: 'var(--accent)' }} />
+                        <span>Revenue / Sales ($)</span>
+                      </div>
+                      <div className="legend-item">
+                        <span className="legend-color" style={{ background: '#f43f5e' }} />
+                        <span>Costs / Expenses ($)</span>
+                      </div>
+                      <div className="legend-item">
+                        <span className="forecast-bar-tag">AI Forecast</span>
+                        <span>Projected Quarters</span>
                       </div>
                     </div>
+                  </div>
+
+                  {combinedTimeline.length > 0 ? (
+                    <div className="interactive-bar-chart" style={{ minHeight: 180, paddingTop: 16 }}>
+                      {combinedTimeline.map((item, idx) => {
+                        const sHeight = Math.round(((item.sales || 0) / maxVal) * 100);
+                        const cHeight = Math.round(((item.costs || 0) / maxVal) * 100);
+                        return (
+                          <div
+                            className={`bar-group${item.isForecast ? ' forecast-col' : ''}`}
+                            key={idx}
+                            title={`${item.period}${item.isForecast ? ' (AI Projection)' : ''}\nSales: $${(item.sales || 0).toLocaleString()}\nCosts: $${(item.costs || 0).toLocaleString()}\nNet Profit: $${(item.profit || 0).toLocaleString()}`}
+                          >
+                            <div className="bars-wrapper">
+                              <div
+                                className="bar-stem bar-sales"
+                                style={{
+                                  height: `${Math.max(4, sHeight)}%`,
+                                  background: item.isForecast ? 'repeating-linear-gradient(45deg, var(--accent), var(--accent) 4px, rgba(14,165,233,0.3) 4px, rgba(14,165,233,0.3) 8px)' : 'var(--accent)',
+                                  border: item.isForecast ? '1px dashed var(--accent)' : 'none',
+                                }}
+                              />
+                              <div
+                                className="bar-stem bar-costs"
+                                style={{
+                                  height: `${Math.max(4, cHeight)}%`,
+                                  background: item.isForecast ? 'repeating-linear-gradient(45deg, #f43f5e, #f43f5e 4px, rgba(244,63,94,0.3) 4px, rgba(244,63,94,0.3) 8px)' : '#f43f5e',
+                                  border: item.isForecast ? '1px dashed #f43f5e' : 'none',
+                                }}
+                              />
+                            </div>
+                            <span className="bar-label-text">
+                              {item.period}
+                            </span>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '40px 0', textAlign: 'center' }}>
+                      No published timeline data available for this company.
+                    </p>
                   )}
-                </>
-              )}
+                </div>
+
+                {/* Customer Breakdown */}
+                {raw.top_customers && raw.top_customers.length > 0 && (
+                  <div className="chart-card">
+                    <h4>Top Accounts &amp; Concentration Risk</h4>
+                    <p className="chart-subtitle">Revenue share across published client accounts</p>
+                    <div className="customer-leaderboard">
+                      {raw.top_customers.map((cust, idx) => (
+                        <div className="customer-row" key={idx}>
+                          <div className="customer-meta">
+                            <span className="customer-name">{cust.name}</span>
+                            <span className="customer-spend">
+                              ${cust.spend.toLocaleString()} ({cust.share_pct}%)
+                            </span>
+                          </div>
+                          <div className="customer-track">
+                            <div
+                              className="customer-fill"
+                              style={{ width: `${Math.min(100, Math.max(8, cust.share_pct * 2))}%` }}
+                            />
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Cost Structure Breakdown */}
+                {raw.category_breakdown && raw.category_breakdown.length > 0 && (
+                  <div className="chart-card">
+                    <h4>Cost Structure &amp; Expenditures</h4>
+                    <p className="chart-subtitle">Expense allocations by department</p>
+                    <div className="category-bars">
+                      {raw.category_breakdown.map((cat, idx) => {
+                        const pct = raw.total_costs > 0
+                          ? Math.round((cat.amount / raw.total_costs) * 100)
+                          : 0;
+                        return (
+                          <div className="customer-row" key={idx}>
+                            <div className="customer-meta">
+                              <span className="customer-name">{cat.name}</span>
+                              <span className="customer-spend">
+                                ${cat.amount.toLocaleString()} ({pct}%)
+                              </span>
+                            </div>
+                            <div className="customer-track">
+                              <div
+                                className="customer-fill"
+                                style={{
+                                  width: `${Math.min(100, Math.max(5, pct))}%`,
+                                  background: 'linear-gradient(90deg, #f43f5e 0%, #f59e0b 100%)',
+                                }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Published Files & Data Evidence Section */}
+              <div className="chart-card" style={{ marginTop: 24 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, flexWrap: 'wrap', gap: 10 }}>
+                  <div>
+                    <h4 style={{ margin: 0 }}>Published Financial Files &amp; CSV Evidence</h4>
+                    <p className="chart-subtitle" style={{ margin: '2px 0 0' }}>
+                      These published files and reports provided by {startupInfo?.name} were analyzed by DeepSeek to formulate the above valuation and projections.
+                    </p>
+                  </div>
+                </div>
+
+                {publishedReports.length > 0 ? (
+                  <div className="data-preview-table-wrapper">
+                    <table className="data-preview-table">
+                      <thead>
+                        <tr>
+                          <th>File Document</th>
+                          <th>Format</th>
+                          <th>Reporting Period</th>
+                          <th>Upload Date</th>
+                          <th>Records Parsed</th>
+                          <th>Download &amp; Verify</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {publishedReports.map((r) => (
+                          <tr key={r.id}>
+                            <td>
+                              <b style={{ color: 'var(--text)' }}>{r.original_filename}</b>
+                            </td>
+                            <td style={{ textTransform: 'uppercase' }}>{r.file_type}</td>
+                            <td>{r.reporting_period || 'Monthly'}</td>
+                            <td>{new Date(r.created_at).toLocaleDateString()}</td>
+                            <td>{r.raw_summary?.rows_count ? `${r.raw_summary.rows_count} records` : 'Verified'}</td>
+                            <td>
+                              {r.file_url ? (
+                                <a
+                                  href={mediaUrl(r.file_url)}
+                                  download={r.original_filename || 'financial_statement.csv'}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="btn btn-outline btn-xs"
+                                  title="Download published file"
+                                >
+                                  <Icon name="doc" /> Download CSV
+                                </a>
+                              ) : (
+                                <span style={{ fontSize: 12, color: 'var(--text-faint)' }}>Available on record</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <p style={{ color: 'var(--text-muted)', fontSize: 13, padding: '24px 0', textAlign: 'center' }}>
+                    No published financial documents attached yet for this company.
+                  </p>
+                )}
+              </div>
             </>
           )}
         </main>
       </div>
-      <CreateStartupModal open={createModalOpen} onClose={() => setCreateModalOpen(false)} />
     </div>
   );
 }

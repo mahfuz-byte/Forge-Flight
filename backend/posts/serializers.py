@@ -1,5 +1,6 @@
 from rest_framework import serializers
 
+from startups.models import Startup
 from .models import Post
 
 
@@ -30,6 +31,8 @@ class PostSerializer(serializers.ModelSerializer):
         user = self.context['request'].user
         if startup is not None and startup.owner_id != user.id and not user.can_moderate:
             raise serializers.ValidationError('You can only post on behalf of a startup you own.')
+        if startup is not None and startup.review_status != Startup.REVIEW_APPROVED:
+            raise serializers.ValidationError('Posts cannot be created until your startup is verified and approved by an administrator.')
         return startup
 
     def validate(self, attrs):

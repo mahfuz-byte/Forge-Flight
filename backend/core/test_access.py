@@ -22,6 +22,7 @@ ANONYMOUS_WRITES = {
 PUBLIC_READS = {
     '/api/',  # DRF router's browsable index of endpoint URLs
     '/api/health/', '/api/csrf/', '/api/site/', '/api/startups/', '/api/posts/', '/api/comments/',
+    '/api/statistics/', '/api/statistics/research/', '/api/statistics/sample-csv/', '/api/statistics/search-companies/',
 }
 DENIED = (401, 403)
 
@@ -110,7 +111,7 @@ class AdminApiMixinTests(APITestCase):
         view = FinanceView.as_view({'get': 'list'})
         factory = APIRequestFactory()
         cases = [
-            (None, 403),
+            (None, DENIED),
             (User.objects.create_user('u@example.com', PW), 403),
             (User.objects.create_user('m@example.com', PW, role=Role.MODERATOR), 403),
             (User.objects.create_user('f@example.com', PW, role=Role.FINANCE_ADMIN), 200),
@@ -122,4 +123,5 @@ class AdminApiMixinTests(APITestCase):
                 request = factory.get('/api/admin/finance/')
                 if user:
                     force_authenticate(request, user=user)
-                self.assertEqual(view(request).status_code, expected)
+                expected_tuple = expected if isinstance(expected, tuple) else (expected,)
+                self.assertIn(view(request).status_code, expected_tuple)

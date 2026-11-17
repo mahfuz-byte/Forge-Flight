@@ -61,8 +61,14 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
     def create(self, request, *args, **kwargs):
         write_serializer = self.get_serializer(data=request.data)
         write_serializer.is_valid(raise_exception=True)
+        # Any startup created by a user starts in the pending stage until approved by an administrator
+        is_staff_override = (
+            request.user.is_authenticated and
+            request.user.has_role(Role.ADMIN) and
+            request.data.get('review_status') == Startup.REVIEW_APPROVED
+        )
         instance = write_serializer.save(
-            review_status=Startup.REVIEW_APPROVED,
+            review_status=Startup.REVIEW_APPROVED if is_staff_override else Startup.REVIEW_PENDING,
         )
         return Response(StartupDetailSerializer(instance).data, status=201)
 
@@ -71,7 +77,13 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
         write_serializer = self.get_serializer(instance, data=request.data, partial=kwargs.get('partial', False))
         write_serializer.is_valid(raise_exception=True)
         self.audit_if_staff(instance, 'update', fields=sorted(write_serializer.validated_data))
-        instance = write_serializer.save(review_status=Startup.REVIEW_APPROVED)
+        resubmit = instance.review_status == Startup.REVIEW_REJECTED and instance.owner_id == request.user.id
+        instance = write_serializer.save()
+        if not (request.user.is_authenticated and request.user.has_role(Role.ADMIN)):
+            # Founders cannot auto-approve their startups; resubmitting or editing while pending stays pending
+            if resubmit or instance.review_status == Startup.REVIEW_PENDING:
+                Startup.objects.filter(pk=instance.pk).update(review_status=Startup.REVIEW_PENDING)
+                instance.review_status = Startup.REVIEW_PENDING
         return Response(StartupDetailSerializer(instance).data)
 
     def perform_destroy(self, instance):
@@ -92,6 +104,8 @@ class StartupViewSet(AuditStaffActionsMixin, viewsets.ModelViewSet):
     def add_document(self, request, slug=None):
         """Upload a pitch deck or other document (owner only, FE-09)."""
         startup = self.get_object()
+        if startup.review_status != Startup.REVIEW_APPROVED:
+            raise PermissionDenied('Documents cannot be uploaded until your startup is approved by an administrator.')
         serializer = DocumentSerializer(data=request.data, context={'request': request})
         serializer.is_valid(raise_exception=True)
         serializer.save(startup=startup, order=startup.docs.count())

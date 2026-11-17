@@ -35,6 +35,8 @@ export default function Feed() {
   const filtered = useMemo(() => posts.filter((post) => {
     if (post.type === 'event') return filter === 'All' || filter === 'Newest';
     const s = startups[post.startupId];
+    // Pending and unapproved startups are hidden from the feed
+    if (s && s.reviewStatus !== 'approved') return false;
     if (filter === 'Trending') return TRENDING_IDS.has(post.startupId);
     if (filter === 'Funding Open') return s?.status === 'open';
     if (filter === 'Collaboration') return post.postType === 'Collaboration Post';
@@ -70,9 +72,18 @@ export default function Feed() {
                 <div className="ms-banner-info">
                   <div className="ms-banner-title">
                     <b>Manage Startup: {firstStartup.name}</b>
-                    <span className={`status-pill ${firstStartup.status === 'open' ? 'status-open' : 'status-soon'}`}>
-                      {firstStartup.status === 'open' ? 'Funding Open' : firstStartup.status}
-                    </span>
+                    {firstStartup.reviewStatus === 'pending' ? (
+                      <span
+                        className="status-pill status-eval"
+                        style={{ background: 'var(--warning-soft)', color: 'var(--warning)', borderColor: 'var(--warning)' }}
+                      >
+                        Pending Approval
+                      </span>
+                    ) : (
+                      <span className={`status-pill ${firstStartup.status === 'open' ? 'status-open' : 'status-soon'}`}>
+                        {firstStartup.status === 'open' ? 'Funding Open' : firstStartup.status}
+                      </span>
+                    )}
                   </div>
                   <span className="ms-banner-sub">
                     Raised {fmtMoney(firstStartup.raised)} of {fmtMoney(firstStartup.goal)}

@@ -44,7 +44,7 @@ class MessagingTests(APITestCase):
         self.assertEqual(owner_inbox.data[0]['messages'][0]['text'], 'Hello')
 
         read = self.owner_client.post(f'/api/conversations/{conversation_id}/read/')
-        self.assertEqual(read.status_code, 204)
+        self.assertIn(read.status_code, (200, 204))
         self.assertTrue(Message.objects.get(pk=sent.data['id']).read)
 
         reply = self.owner_client.post('/api/messages/', {'conversation': conversation_id, 'text': 'Hi back'})

@@ -29,14 +29,20 @@ function FundingBlock({ s }) {
 }
 
 function InvestorPanel({ id, s }) {
-  const remaining = s.deadline.match(/\d+/) ? s.deadline.match(/\d+/)[0] : '0';
+  const { investments } = useApp();
+  const confirmedCount = (investments || []).filter(
+    (i) => i.startupId === id && (i.status === 'accepted' || i.status === 'completed'),
+  ).length;
+  const timeline = s.deadline ? s.deadline : 'Active';
+  const needed = Math.max(0, (s.goal || 0) - (s.raised || 0));
+
   return (
     <div className="investor-panel">
       <div className="ip-grid">
-        <div className="ip-item"><span>Investment Needed</span><b>{fmtMoney(s.goal - s.raised)}</b></div>
-        <div className="ip-item"><span>Remaining Days</span><b>{remaining}</b></div>
-        <div className="ip-item"><span>Current Investors</span><b>{3 + Math.round(s.raised / 40000)}</b></div>
-        <div className="ip-item"><span>Expected ROI</span><b>{4 + Math.round(s.raised / 60000)}x (est.)</b></div>
+        <div className="ip-item"><span>Investment Needed</span><b>{fmtMoney(needed)}</b></div>
+        <div className="ip-item"><span>Timeline</span><b>{timeline}</b></div>
+        <div className="ip-item"><span>Confirmed Investors</span><b>{confirmedCount}</b></div>
+        <div className="ip-item"><span>Round Status</span><b>{statusMeta(s.status).label}</b></div>
       </div>
       <InvestButton startupId={id} wide />
     </div>
@@ -284,7 +290,7 @@ export default function FeedCard({ post }) {
         </button>
         {s && (
           <>
-            <button className="action-btn" onClick={() => navigate(`/profile/${id}#comments`)}><Icon name="comment" />Comment</button>
+            <button className="action-btn" onClick={() => navigate(`/profile/${id}`)}><Icon name="arrow-r" />Profile</button>
             {!isOwner && (
               <>
                 <button className={`action-btn${isSaved ? ' liked' : ''}`} disabled={busy === 'save'} aria-pressed={isSaved} onClick={() => run('save', () => toggleSaved(id))}>

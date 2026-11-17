@@ -298,10 +298,9 @@ def seed_everything():
     admin_user.save()
     print("Created/Updated Super Admin: admin@forgeflight.com")
 
-    # Disable mandatory admin review & auto-approve any pending startups
-    SiteSettings.objects.update_or_create(pk=1, defaults={'require_startup_approval': False})
-    Startup.objects.filter(review_status='pending').update(review_status='approved')
-    print("Auto-approved all startups and disabled review requirement.")
+    # Enforce mandatory admin review for new startups
+    SiteSettings.objects.update_or_create(pk=1, defaults={'require_startup_approval': True})
+    print("Enforced mandatory admin approval for all new startups.")
 
     created_users = []
     created_startups = []

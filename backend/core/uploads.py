@@ -59,17 +59,23 @@ def _is_zip(h):
     return h.startswith(_ZIP)
 
 
+def _is_csv(h):
+    # CSV is text: ensure it contains no binary null bytes
+    return b'\x00' not in h
+
+
 SIGNATURES = {
     'jpg': _is_jpeg, 'jpeg': _is_jpeg, 'png': _is_png, 'gif': _is_gif, 'webp': _is_webp,
     'mp4': _is_iso_media, 'mov': _is_iso_media, 'm4v': _is_iso_media, 'webm': _is_webm,
     'pdf': _is_pdf,
     'doc': _is_ole, 'xls': _is_ole, 'ppt': _is_ole,
     'docx': _is_zip, 'xlsx': _is_zip, 'pptx': _is_zip,
+    'csv': _is_csv,
 }
 
 IMAGE_EXTS = {'jpg', 'jpeg', 'png', 'gif', 'webp'}
 VIDEO_EXTS = {'mp4', 'mov', 'm4v', 'webm'}
-DOCUMENT_EXTS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx'}
+DOCUMENT_EXTS = {'pdf', 'doc', 'docx', 'xls', 'xlsx', 'ppt', 'pptx', 'csv'}
 
 # Office Open XML parts that must be present / must never be present.
 _OOXML_REQUIRED = '[Content_Types].xml'

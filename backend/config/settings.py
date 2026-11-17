@@ -40,6 +40,8 @@ ALLOWED_HOSTS = config('DJANGO_ALLOWED_HOSTS', default='localhost,127.0.0.1', ca
 _render_hostname = config('RENDER_EXTERNAL_HOSTNAME', default='')
 if _render_hostname:
     ALLOWED_HOSTS.append(_render_hostname)
+if DEBUG:
+    ALLOWED_HOSTS.append('testserver')
 
 
 # Application definition
@@ -224,8 +226,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.TokenAuthentication',
         'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.TokenAuthentication',
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticatedOrReadOnly',

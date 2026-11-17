@@ -34,8 +34,8 @@ class ConversationViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def read(self, request, pk=None):
         conversation = self.get_object()
-        conversation.messages.exclude(sender=request.user).filter(read=False).update(read=True)
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        updated = conversation.messages.exclude(sender=request.user).filter(read=False).update(read=True)
+        return Response({'marked_read': updated}, status=status.HTTP_200_OK)
 
     @action(detail=False, methods=['get'])
     def unread(self, request):

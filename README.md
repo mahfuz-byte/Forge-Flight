@@ -9,7 +9,7 @@
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-336791?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
 [![Ollama](https://img.shields.io/badge/Ollama-DeepSeek--R1-black?logo=ollama&logoColor=white)](https://ollama.ai/)
 [![Docker](https://img.shields.io/badge/Docker-Enabled-2496ed?logo=docker&logoColor=white)](https://www.docker.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
 
 **Forge & Flight** is a full-stack startup acceleration platform bridging founders, angel investors, venture partners, and skilled operators. Founders showcase their ventures, manage live funding rounds, publish milestone updates, and recruit collaborators. Investors discover early-stage opportunities, inspect detailed founder metrics, and deploy capital. The platform integrates local private AI inference via **DeepSeek-R1** on **Ollama** for automated financial health scoring, SWOT analysis, and CSV/PDF report parsing.
 

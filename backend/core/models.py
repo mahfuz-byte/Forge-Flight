@@ -18,7 +18,7 @@ class SiteSettings(models.Model):
         default=True, help_text='"Continue with Google" works (sign-in and sign-up).',
     )
     require_startup_approval = models.BooleanField(
-        default=False, help_text='New startups stay hidden until an admin approves them.',
+        default=True, help_text='New startups stay hidden until an admin approves them.',
     )
     site_banner = models.CharField(
         max_length=255, blank=True, help_text='Shown at the top of every page when set (e.g. planned maintenance).',

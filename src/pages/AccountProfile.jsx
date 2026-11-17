@@ -13,12 +13,22 @@ import '../styles/settings.css';
 import '../styles/account.css';
 
 function StartupTile({ id, s, onView, onManage }) {
+  const isPending = s.reviewStatus === 'pending';
   const meta = statusMeta(s.status);
   return (
     <div className="startup-tile">
       <div className="startup-tile-head">
         <LogoBadge id={id} initials={s.initials} size={46} />
-        <span className={`status-pill ${meta.cls}`}>{meta.label}</span>
+        {isPending ? (
+          <span
+            className="status-pill status-eval"
+            style={{ background: 'var(--warning-soft)', color: 'var(--warning)', borderColor: 'var(--warning)' }}
+          >
+            Pending Approval
+          </span>
+        ) : (
+          <span className={`status-pill ${meta.cls}`}>{meta.label}</span>
+        )}
       </div>
       <h4>{s.name}{s.verified && <Icon name="check" />}</h4>
       <p>{s.tagline || 'No tagline yet.'}</p>
@@ -48,11 +58,11 @@ export default function AccountProfile() {
 
   const savedStartups = Array.from(saved)
     .map((id) => [id, startups[id]])
-    .filter(([, s]) => s);
+    .filter(([, s]) => s && (s.reviewStatus === 'approved' || s.ownerId === currentUser.id));
 
   const followedStartups = Array.from(followed)
     .map((id) => [id, startups[id]])
-    .filter(([, s]) => s);
+    .filter(([, s]) => s && (s.reviewStatus === 'approved' || s.ownerId === currentUser.id));
 
   const myInvestments = useMemo(
     () => investments.filter((investment) => investment.investorId === currentUser.id),

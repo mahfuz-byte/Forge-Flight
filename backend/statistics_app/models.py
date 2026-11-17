@@ -40,6 +40,8 @@ class StartupStatisticsReport(models.Model):
     )
     original_filename = models.CharField(max_length=255)
     file_type = models.CharField(max_length=10, choices=FILE_TYPE_CHOICES, default=FILE_CSV)
+    is_published = models.BooleanField(default=True, db_index=True)
+    reporting_period = models.CharField(max_length=80, blank=True, default='')
     
     # Financial & Customer calculated baseline metrics
     raw_summary = models.JSONField(default=dict, blank=True)
@@ -58,3 +60,36 @@ class StartupStatisticsReport(models.Model):
 
     def __str__(self):
         return f"{self.startup.name} Stats ({self.original_filename}) - {self.status}"
+
+
+class StartupAIVerdict(models.Model):
+    startup = models.OneToOneField(
+        'startups.Startup',
+        on_delete=models.CASCADE,
+        related_name='ai_verdict'
+    )
+    valuation_low = models.BigIntegerField(default=0)
+    valuation_high = models.BigIntegerField(default=0)
+    valuation_multiple = models.CharField(max_length=80, blank=True, default="4x - 6x ARR")
+    valuation_rationale = models.TextField(blank=True)
+    
+    historical_mom_growth = models.FloatField(default=0.0)
+    projected_annual_growth = models.FloatField(default=0.0)
+    growth_stage = models.CharField(max_length=60, blank=True, default="Early Stage")
+    
+    future_projections = models.JSONField(default=list, blank=True)
+    investment_verdict = models.CharField(max_length=100, default="Promising Trajectory")
+    health_score = models.PositiveIntegerField(default=75)
+    executive_summary = models.TextField(blank=True)
+    
+    key_strengths = models.JSONField(default=list, blank=True)
+    critical_risks = models.JSONField(default=list, blank=True)
+    actionable_recommendations = models.JSONField(default=list, blank=True)
+    chart_insights = models.JSONField(default=dict, blank=True)
+    
+    analyzed_files_count = models.PositiveIntegerField(default=0)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"AI Verdict for {self.startup.name} ({self.health_score}/100)"
+

@@ -51,8 +51,10 @@ function transformStartup(s) {
     verified: s.verified,
     founder: s.founder,
     founderAvatar: mediaUrl(s.founder_avatar),
-    reviewStatus: s.review_status || 'approved',
+    reviewStatus: s.review_status || 'pending',
     reviewNote: s.review_note || '',
+    tradeLicense: s.trade_license || '',
+    tinNumber: s.tin_number || '',
     featured: Boolean(s.featured),
     ownerId: s.owner,
     tagline: s.tagline,
@@ -450,9 +452,15 @@ export function AppProvider({ children }) {
     }));
   }
 
-  async function createStartup({ name, tagline, tags, overview, goal }) {
+  async function createStartup({ name, tagline, tags, overview, goal, tradeLicense, tinNumber }) {
     const s = await api.post('/startups/', {
-      name, tagline: tagline || '', tags: (tags || []).filter(Boolean), overview: overview || '', goal: Number(goal) || 0,
+      name,
+      tagline: tagline || '',
+      tags: (tags || []).filter(Boolean),
+      overview: overview || '',
+      goal: Number(goal) || 0,
+      trade_license: tradeLicense || '',
+      tin_number: tinNumber || '',
     });
     setStartups((cur) => ({ ...cur, [s.slug]: transformStartup(s) }));
     setComments((cur) => ({ ...cur, [s.slug]: transformComments(s) }));
@@ -567,8 +575,20 @@ export function AppProvider({ children }) {
   }
 
   async function refreshStartup(slug) {
-    const s = await api.get(`/startups/${slug}/`);
-    setStartups((cur) => ({ ...cur, [s.slug]: transformStartup(s) }));
+    try {
+      const s = await api.get(`/startups/${slug}/`);
+      const transformed = transformStartup(s);
+      setStartups((cur) => ({ ...cur, [s.slug]: transformed }));
+      return transformed;
+    } catch (err) {
+      setStartups((cur) => {
+        if (!cur[slug]) return cur;
+        const copy = { ...cur };
+        delete copy[slug];
+        return copy;
+      });
+      throw err;
+    }
   }
 
   // Founder decision on an investment: status is 'accepted' or 'rejected'.
@@ -737,7 +757,7 @@ export function AppProvider({ children }) {
         currentUser, updateCurrentUser, registerUser, login, googleSignIn, logOut, signedIn, setSignedIn,
         changePassword, connectGoogle,
         theme, setTheme, toggleTheme, site,
-        startups, createStartup, updateStartup, deleteStartup, uploadDocument, removeDocument,
+        startups, refreshStartup, createStartup, updateStartup, deleteStartup, uploadDocument, removeDocument,
         myStartups, collaboratingIds,
         saved, toggleSaved,
         followed, toggleFollow,

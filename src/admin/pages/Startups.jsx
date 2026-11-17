@@ -46,6 +46,15 @@ export default function Startups() {
     },
     { key: 'owner', label: 'Founder', render: (s) => <>{s.owner_name}<br /><span className="admin-sub">{s.owner_email}</span></> },
     {
+      key: 'verification', label: 'License & TIN',
+      render: (s) => (
+        <div style={{ fontSize: 12 }}>
+          <div><span className="admin-sub">License:</span> <b className="mono">{s.trade_license || '—'}</b></div>
+          <div><span className="admin-sub">TIN:</span> <b className="mono">{s.tin_number || '—'}</b></div>
+        </div>
+      ),
+    },
+    {
       key: 'review_status', label: 'Review',
       render: (s) => (
         <>
