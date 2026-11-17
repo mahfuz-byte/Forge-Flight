@@ -12,7 +12,7 @@ import '../styles/statistics.css';
 export default function Statistics() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
-  const { startups } = useApp();
+  const { startups, currentUser } = useApp();
 
   const [selectedSlug, setSelectedSlug] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -26,18 +26,45 @@ export default function Statistics() {
 
   const searchBoxRef = useRef(null);
 
-  // Initialize selected startup from query param or first available startup
+  // Initialize selected startup ONLY if an explicit query param is provided (e.g. direct link)
+  // Otherwise, always start with a clean page and do not auto-select any company.
   useEffect(() => {
     const paramSlug = searchParams.get('startup') || searchParams.get('company');
     if (paramSlug) {
       setSelectedSlug(paramSlug);
+      const st = startups && startups[paramSlug];
+      if (st && st.name) setSearchQuery(st.name);
     } else {
-      const startupKeys = Object.keys(startups || {});
-      if (startupKeys.length > 0 && !selectedSlug) {
-        setSelectedSlug(startupKeys[0]);
-      }
+      setSelectedSlug('');
+      setSearchQuery('');
+      setSearchResults([]);
+      setResearchData(null);
     }
-  }, [searchParams, startups, selectedSlug]);
+  }, [searchParams, startups]);
+
+  // Clean unmount: when leaving this page to go to any other field, wipe all previous search data and graphs
+  useEffect(() => {
+    return () => {
+      setSelectedSlug('');
+      setSearchQuery('');
+      setSearchResults([]);
+      setResearchData(null);
+      setErrorMessage('');
+    };
+  }, []);
+
+  // When switching accounts (logout or login with different account), reset all research, searches, and graphs
+  useEffect(() => {
+    setSelectedSlug('');
+    setSearchQuery('');
+    setSearchResults([]);
+    setResearchData(null);
+    setErrorMessage('');
+    setSearchDropdownOpen(false);
+    if (searchParams.get('startup') || searchParams.get('company')) {
+      setSearchParams({}, { replace: true });
+    }
+  }, [currentUser?.id, searchParams, setSearchParams]);
 
   // Debounced live company search
   useEffect(() => {
@@ -71,7 +98,11 @@ export default function Statistics() {
 
   // Fetch company research dossier when selectedSlug changes
   useEffect(() => {
-    if (!selectedSlug) return;
+    if (!selectedSlug) {
+      setResearchData(null);
+      setLoadingResearch(false);
+      return;
+    }
     let isMounted = true;
     setLoadingResearch(true);
     setErrorMessage('');
@@ -95,9 +126,20 @@ export default function Statistics() {
 
   function handleSelectCompany(slug, name) {
     setSelectedSlug(slug);
-    setSearchParams({ startup: slug });
-    setSearchQuery(name);
+    setSearchQuery(name || slug);
     setSearchDropdownOpen(false);
+  }
+
+  function handleClearSearch() {
+    setSelectedSlug('');
+    setSearchQuery('');
+    setSearchResults([]);
+    setResearchData(null);
+    setErrorMessage('');
+    setSearchDropdownOpen(false);
+    if (searchParams.get('startup') || searchParams.get('company')) {
+      setSearchParams({}, { replace: true });
+    }
   }
 
   // Trigger / Re-run DeepSeek AI Analysis on all published data
@@ -177,6 +219,7 @@ export default function Statistics() {
                 <input
                   type="text"
                   className="research-search-input"
+                  style={{ paddingRight: (searchQuery || selectedSlug) ? 36 : 16 }}
                   placeholder="Search any company (e.g. HealthSync, Pathao)..."
                   value={searchQuery}
                   onChange={(e) => {
@@ -185,6 +228,29 @@ export default function Statistics() {
                   }}
                   onFocus={() => setSearchDropdownOpen(true)}
                 />
+                {(searchQuery || selectedSlug) && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    style={{
+                      position: 'absolute',
+                      right: 12,
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: 'var(--text-muted)',
+                      cursor: 'pointer',
+                      fontSize: 16,
+                      lineHeight: 1,
+                      padding: 4,
+                    }}
+                    title="Clear search"
+                    aria-label="Clear search"
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
 
               {searchDropdownOpen && searchResults.length > 0 && (
@@ -223,8 +289,8 @@ export default function Statistics() {
             </div>
           )}
 
-          {/* Company Context Bar */}
-          {startupInfo && (
+          {/* Company Context Bar (shown only when a company is selected and research is loaded) */}
+          {startupInfo && researchData && !loadingResearch && (
             <div className="settings-card" style={{ padding: '16px 20px', marginBottom: 20, display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
                 <LogoBadge id={startupInfo.slug} initials={startupInfo.initials} size={48} />
@@ -254,6 +320,14 @@ export default function Statistics() {
                 <button
                   type="button"
                   className="btn btn-outline btn-sm"
+                  onClick={handleClearSearch}
+                  title="Clear this research and return to clean research page"
+                >
+                  <Icon name="close" /> Clear Search
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-outline btn-sm"
                   onClick={() => navigate(`/profile/${startupInfo.slug}`)}
                 >
                   <Icon name="compass" /> View Profile
@@ -266,6 +340,71 @@ export default function Statistics() {
                 >
                   <Icon name="sparkle" /> {analyzing ? 'Reasoning with DeepSeek…' : 'Run DeepSeek AI Verdict'}
                 </button>
+              </div>
+            </div>
+          )}
+
+          {/* Clean State (When no search has been performed yet) */}
+          {!loadingResearch && !analyzing && (!selectedSlug || !researchData) && (
+            <div className="founder-gate-card" style={{ maxWidth: 680, margin: '20px auto 40px', padding: '44px 32px' }}>
+              <div className="founder-gate-icon" style={{ background: 'var(--accent-soft)', color: 'var(--accent)' }}>
+                <Icon name="sparkle" />
+              </div>
+              <h3 style={{ fontSize: 22, marginBottom: 8 }}>Search a Company for AI Research</h3>
+              <p style={{ maxWidth: 520, margin: '0 auto 24px', lineHeight: 1.6, color: 'var(--text-muted)' }}>
+                Type any company name or select a featured startup below to run real-time DeepSeek AI valuations, forward projections, unit economics, and investment health grades.
+              </p>
+
+              {/* Quick Suggestion Chips */}
+              <div style={{ marginTop: 20 }}>
+                <span style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-faint)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 12 }}>
+                  Featured Companies for Analysis
+                </span>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, justifyContent: 'center' }}>
+                  {Object.entries(startups || {})
+                    .filter(([, s]) => s.reviewStatus === 'approved')
+                    .slice(0, 5)
+                    .map(([slug, s]) => (
+                      <button
+                        key={slug}
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px' }}
+                        onClick={() => handleSelectCompany(slug, s.name)}
+                      >
+                        <LogoBadge id={slug} initials={s.initials} size={20} />
+                        <span>{s.name}</span>
+                      </button>
+                    ))}
+                </div>
+              </div>
+
+              {/* Highlights 3-col info */}
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginTop: 36, textAlign: 'left', borderTop: '1px solid var(--border)', paddingTop: 24 }}>
+                <div style={{ padding: '8px 12px' }}>
+                  <b style={{ fontSize: 13, display: 'block', marginBottom: 4, color: 'var(--text)' }}>
+                    📈 Forward Projections
+                  </b>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    Multi-month projected revenue, operating cost models, and EBITDA forecasts.
+                  </span>
+                </div>
+                <div style={{ padding: '8px 12px' }}>
+                  <b style={{ fontSize: 13, display: 'block', marginBottom: 4, color: 'var(--text)' }}>
+                    💎 Valuation Estimates
+                  </b>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    Low-to-high valuation ranges based on industry ARR multiples and traction.
+                  </span>
+                </div>
+                <div style={{ padding: '8px 12px' }}>
+                  <b style={{ fontSize: 13, display: 'block', marginBottom: 4, color: 'var(--text)' }}>
+                    🛡️ Verified Statements
+                  </b>
+                  <span style={{ fontSize: 12, color: 'var(--text-muted)', lineHeight: 1.5 }}>
+                    Evidence backed by published CSV sales transactions and monthly reports.
+                  </span>
+                </div>
               </div>
             </div>
           )}
